@@ -1,0 +1,31 @@
+### AUTO-DETECT ###
+* text=auto
+
+### RUST ###
+*.rs       text diff=rust
+
+### DOCKER ###
+*.dockerignore text
+Dockerfile     text
+
+### DOCUMENTATION ###
+*.markdown   text
+*.md         text
+*.txt        text
+authors      text
+changelog    text
+changes      text
+contributing text
+copying      text
+copyright    text
+*copyright*  text
+install      text
+license      text
+news         text
+readme       text
+todo         text
+
+### CONFIGS ###
+*.toml     text diff=toml
+*.yaml     text
+*.yml      text
