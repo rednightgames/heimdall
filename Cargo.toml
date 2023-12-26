@@ -1,0 +1,12 @@
+[packages]
+name = "heimdall"
+version = "0.0.0"
+authors = ["Dmitriy Chukhno <dmitr1sdadaya@protonmail.com>"]
+edition = "2021"
+
+[workspace]
+resolver = "2"
+members = [
+  "packages/*",
+  "services/*",
+]

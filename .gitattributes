@@ -29,4 +29,3 @@ todo         text
 *.toml     text diff=toml
 *.yaml     text
 *.yml      text
-
