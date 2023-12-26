@@ -14,7 +14,8 @@ ehthumbs.db
 ehthumbs_vista.db
 [Dd]esktop.ini
 
-### JetBrains IDE's ###
+### IDE's ###
+.vscode
 .idea
 
 ### Logs ###
