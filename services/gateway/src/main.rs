@@ -1,4 +1,4 @@
-use actix_web::{get, web, App, HttpServer, Responder};
+use actix_web::{App, HttpServer};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
