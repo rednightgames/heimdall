@@ -1,6 +1,6 @@
 [package]
 name = "config"
-description = "Reverse proxy edge server"
+description = "Repository / Provider of configurations"
 authors = ["Dmitriy Chukhno <dmitr1sdadaya@protonmail.com>"]
 version = "0.1.0"
 edition = "2021"
