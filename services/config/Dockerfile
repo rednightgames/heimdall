@@ -7,7 +7,7 @@ WORKDIR /app/services/config
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends --assume-yes \
-  protobuf-compiler
+  protobuf-compiler libssl-dev pkg-config
 
 COPY . .
 
