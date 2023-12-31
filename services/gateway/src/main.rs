@@ -1,4 +1,4 @@
-use actix_web::{get, App, HttpResponse, HttpServer, Responder, middleware};
+use actix_web::{get, middleware, App, HttpResponse, HttpServer, Responder};
 use futures::future;
 
 #[get("/")]

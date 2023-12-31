@@ -1,10 +1,25 @@
-use config::{
-    domain::{models::config::Config, repositories::config::{ConfigRepository, ConfigQueryParams}},
-    infrastructure::repositories::repository::ConfigR2Repository,
-};
+use config::domain::models::config::Config;
+use config::domain::repositories::config::ConfigRepository;
+use config::infrastructure::databases::s3;
+use config::infrastructure::repositories::repository::ConfigS3Repository;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    let repository = ConfigS3Repository::new(Arc::new(s3::connection()));
+
+    let con = match repository
+        .create(&Config {
+            id: 1488,
+            config: String::from("{\"test\": 123}"),
+        })
+        .await
+    {
+        Ok(b) => b,
+        Err(e) => panic!("{}", e),
+    };
+
+    /*
     let repository = ConfigR2Repository::new(bucket.clone());
 
     let con = match repository
@@ -31,6 +46,8 @@ async fn main() -> std::io::Result<()> {
     }
 
     println!("{}", con.config);
+
+     */
 
     Ok(())
 }
