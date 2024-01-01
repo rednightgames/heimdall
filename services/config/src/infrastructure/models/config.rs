@@ -1,14 +1,18 @@
-use crate::domain::models::config::Config;
+use crate::domain::models::{config::Config, id::ID};
 
-pub struct ConfigR2 {
+pub struct ConfigS3 {
+    pub id: ID,
     pub config: String,
+    pub created_at: i64,
 }
 
 // Factory method for creating a new ConfigR2 from a Config
-impl From<Config> for ConfigR2 {
-    fn from(value: Config) -> Self {
-        Self {
-            config: value.config,
+impl From<Config> for ConfigS3 {
+    fn from(c: Config) -> Self {
+        ConfigS3 {
+            id: c.id,
+            config: c.config,
+            created_at: c.created_at,
         }
     }
 }

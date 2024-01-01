@@ -1,4 +1,4 @@
-use config::domain::models::config::Config;
+use config::domain::models::config::CreateConfig;
 use config::domain::repositories::config::ConfigRepository;
 use config::infrastructure::databases::s3;
 use config::infrastructure::repositories::repository::ConfigS3Repository;
@@ -8,9 +8,9 @@ use std::sync::Arc;
 async fn main() -> std::io::Result<()> {
     let repository = ConfigS3Repository::new(Arc::new(s3::connection()));
 
-    let con = match repository
-        .create(&Config {
-            id: 1488,
+    let _con = match repository
+        .create(&CreateConfig {
+            environment: String::from("development"),
             config: String::from("{\"test\": 123}"),
         })
         .await

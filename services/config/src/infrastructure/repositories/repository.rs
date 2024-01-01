@@ -1,3 +1,4 @@
+use crate::domain::models::config::CreateConfig;
 use crate::domain::models::{config::Config, id::ID};
 use crate::domain::repositories::config::{ConfigQueryParams, ConfigRepository};
 use crate::domain::repositories::repository::{RepositoryResult, ResultPaging};
@@ -18,18 +19,22 @@ impl ConfigS3Repository {
 
 #[async_trait]
 impl ConfigRepository for ConfigS3Repository {
-    async fn create(&self, new_config: &Config) -> RepositoryResult<Config> {
-        let res = self
-            .bucket
+    async fn create(&self, new_config: &CreateConfig) -> RepositoryResult<Config> {
+        self.bucket
             .put_object_with_content_type(
-                format!("{}.json", new_config.id),
+                format!("{}/{}.json", new_config.environment, "0"),
                 new_config.config.as_bytes(),
                 "application/json",
             )
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
-        Ok(new_config.clone())
+        Ok(Config {
+            id: 0,
+            config: String::from(""),
+            environment: String::from("value"),
+            created_at: 0,
+        })
     }
 
     async fn list(&self, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>> {
@@ -42,8 +47,6 @@ impl ConfigRepository for ConfigS3Repository {
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
         for rec in res {
-            println!("test");
-
             for obj in rec.contents {
                 let filename = obj.key.strip_suffix(".json").unwrap_or_default();
 
@@ -57,11 +60,11 @@ impl ConfigRepository for ConfigS3Repository {
                     .map_err(|err| S3RepositoryError::from(err).into_inner())?
                     .timestamp_millis();
 
-                println!("{}", timeshtamp);
-
                 configs.push(Config {
                     id,
                     config: String::from(""),
+                    environment: String::from("value"),
+                    created_at: timeshtamp,
                 });
             }
         }
@@ -74,8 +77,10 @@ impl ConfigRepository for ConfigS3Repository {
 
     async fn get(&self, config_id: ID) -> RepositoryResult<Config> {
         Ok(Config {
-            config: String::from(""),
             id: config_id,
+            config: String::from(""),
+            environment: String::from("value"),
+            created_at: 0,
         })
     }
 
