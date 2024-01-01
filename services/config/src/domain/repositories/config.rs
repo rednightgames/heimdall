@@ -22,7 +22,7 @@ impl QueryParams for ConfigQueryParams {
 
 #[async_trait]
 pub trait ConfigRepository: Send + Sync {
-    async fn create(&self, new_config: &CreateConfig) -> RepositoryResult<Config>;
+    async fn create(&self, id: ID, new_config: &CreateConfig) -> RepositoryResult<Config>;
     async fn list(&self, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>>;
     async fn get(&self, config_id: ID) -> RepositoryResult<Config>;
     async fn delete(&self, config_id: ID) -> RepositoryResult<()>;

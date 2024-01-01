@@ -41,9 +41,9 @@ pub struct RepositoryError {
 }
 
 impl From<RepositoryError> for CommonError {
-    fn from(val: RepositoryError) -> Self {
+    fn from(error: RepositoryError) -> Self {
         CommonError {
-            message: val.message,
+            message: error.message,
             code: 1,
         }
     }

@@ -1,17 +1,36 @@
 use config::domain::models::config::CreateConfig;
-use config::domain::repositories::config::ConfigRepository;
+use config::domain::services::config::ConfigService;
 use config::infrastructure::databases::s3;
 use config::infrastructure::repositories::repository::ConfigS3Repository;
+use config::services::config::ConfigServiceImpl;
+use id::Generator;
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let repository = ConfigS3Repository::new(Arc::new(s3::connection()));
 
-    let _con = match repository
-        .create(&CreateConfig {
-            environment: String::from("development"),
+    let svc = ConfigServiceImpl::new(Generator::default(), Arc::new(repository));
+
+    for _ in 0..10 {
+        let _con = match svc
+            .create(CreateConfig {
+                name: String::from("config"),
+                config: String::from("{\"test\": 123}"),
+                environment: String::from("development"),
+            })
+            .await
+        {
+            Ok(b) => b,
+            Err(e) => panic!("{}", e),
+        };
+    }
+
+    let _con = match svc
+        .create(CreateConfig {
+            name: String::from("config"),
             config: String::from("{\"test\": 123}"),
+            environment: String::from("stage"),
         })
         .await
     {

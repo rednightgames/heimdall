@@ -19,10 +19,10 @@ impl ConfigS3Repository {
 
 #[async_trait]
 impl ConfigRepository for ConfigS3Repository {
-    async fn create(&self, new_config: &CreateConfig) -> RepositoryResult<Config> {
+    async fn create(&self, id: ID, new_config: &CreateConfig) -> RepositoryResult<Config> {
         self.bucket
             .put_object_with_content_type(
-                format!("{}/{}.json", new_config.environment, "0"),
+                format!("{}/{}.{}.json", new_config.environment, id, new_config.name),
                 new_config.config.as_bytes(),
                 "application/json",
             )
@@ -31,6 +31,7 @@ impl ConfigRepository for ConfigS3Repository {
 
         Ok(Config {
             id: 0,
+            name: String::from("value"),
             config: String::from(""),
             environment: String::from("value"),
             created_at: 0,
@@ -62,6 +63,7 @@ impl ConfigRepository for ConfigS3Repository {
 
                 configs.push(Config {
                     id,
+                    name: String::from(""),
                     config: String::from(""),
                     environment: String::from("value"),
                     created_at: timeshtamp,
@@ -78,6 +80,7 @@ impl ConfigRepository for ConfigS3Repository {
     async fn get(&self, config_id: ID) -> RepositoryResult<Config> {
         Ok(Config {
             id: config_id,
+            name: String::from(""),
             config: String::from(""),
             environment: String::from("value"),
             created_at: 0,
