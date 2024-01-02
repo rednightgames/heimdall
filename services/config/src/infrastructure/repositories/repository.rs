@@ -1,7 +1,7 @@
 use crate::domain::models::config::CreateConfig;
 use crate::domain::models::{config::Config, id::ID};
 use crate::domain::repositories::config::{ConfigQueryParams, ConfigRepository};
-use crate::domain::repositories::repository::{RepositoryResult, ResultPaging};
+use crate::domain::repositories::repository::{RepositoryResult, ResultPaging, QueryParams};
 use crate::infrastructure::{databases::s3::Bucket, error::S3RepositoryError};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -41,34 +41,35 @@ impl ConfigRepository for ConfigS3Repository {
     async fn list(&self, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>> {
         let mut configs: Vec<Config> = vec![];
 
-        let res = self
+        let (res, _) = self
             .bucket
-            .list(String::default(), Option::from(String::from("/")))
+            .list_page(String::from("stage/"), Option::from(String::from("/")), None, None, Option::from(params.page_size()))
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
-        for rec in res {
-            for obj in rec.contents {
-                let filename = obj.key.strip_suffix(".json").unwrap_or_default();
+        println!("{}", params.page_size());
+        println!("{}", base64_url::encode(res.next_continuation_token.unwrap().as_str()));
 
-                let id = String::from(filename)
-                    .parse::<u64>()
-                    .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+        for obj in res.contents {
+            let filename = obj.key.strip_suffix(".json").unwrap_or_default();
 
-                let timeshtamp = obj
-                    .last_modified
-                    .parse::<DateTime<Utc>>()
-                    .map_err(|err| S3RepositoryError::from(err).into_inner())?
-                    .timestamp_millis();
+            let id = String::from(filename)
+                .parse::<u64>()
+                .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
-                configs.push(Config {
-                    id,
-                    name: String::from(""),
-                    config: String::from(""),
-                    environment: String::from("value"),
-                    created_at: timeshtamp,
-                });
-            }
+            let timeshtamp = obj
+                .last_modified
+                .parse::<DateTime<Utc>>()
+                .map_err(|err| S3RepositoryError::from(err).into_inner())?
+                .timestamp_millis();
+
+            configs.push(Config {
+                id,
+                name: String::from(""),
+                config: String::from(""),
+                environment: String::from("value"),
+                created_at: timeshtamp,
+            });
         }
 
         Ok(ResultPaging {

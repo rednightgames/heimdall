@@ -32,27 +32,27 @@ impl ConfigService for ConfigServiceImpl {
         self.repository
             .create(id, &cloned)
             .await
-            .map_err(|err| CommonError::from(err))
+            .map_err(CommonError::from)
     }
 
     async fn list(&self, params: ConfigQueryParams) -> Result<ResultPaging<Config>, CommonError> {
         self.repository
             .list(params)
             .await
-            .map_err(|err| CommonError::from(err))
+            .map_err(CommonError::from)
     }
 
     async fn get(&self, config_id: ID) -> Result<Config, CommonError> {
         self.repository
             .get(config_id)
             .await
-            .map_err(|err| CommonError::from(err))
+            .map_err(CommonError::from)
     }
 
     async fn delete(&self, config_id: ID) -> Result<(), CommonError> {
         self.repository
             .delete(config_id)
             .await
-            .map_err(|err| CommonError::from(err))
+            .map_err(CommonError::from)
     }
 }

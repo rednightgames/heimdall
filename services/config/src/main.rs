@@ -1,4 +1,4 @@
-use config::domain::models::config::CreateConfig;
+use config::domain::repositories::config::ConfigQueryParams;
 use config::domain::services::config::ConfigService;
 use config::infrastructure::databases::s3;
 use config::infrastructure::repositories::repository::ConfigS3Repository;
@@ -12,28 +12,7 @@ async fn main() -> std::io::Result<()> {
 
     let svc = ConfigServiceImpl::new(Generator::default(), Arc::new(repository));
 
-    for _ in 0..10 {
-        let _con = match svc
-            .create(CreateConfig {
-                name: String::from("config"),
-                config: String::from("{\"test\": 123}"),
-                environment: String::from("development"),
-            })
-            .await
-        {
-            Ok(b) => b,
-            Err(e) => panic!("{}", e),
-        };
-    }
-
-    let _con = match svc
-        .create(CreateConfig {
-            name: String::from("config"),
-            config: String::from("{\"test\": 123}"),
-            environment: String::from("stage"),
-        })
-        .await
-    {
+    match svc.list(ConfigQueryParams {page: None, page_size: Option::from(5)}).await {
         Ok(b) => b,
         Err(e) => panic!("{}", e),
     };

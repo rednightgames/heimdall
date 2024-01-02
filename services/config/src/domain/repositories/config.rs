@@ -6,16 +6,15 @@ use crate::domain::models::id::ID;
 use async_trait::async_trait;
 
 pub struct ConfigQueryParams {
-    pub page: Option<i32>,
-    pub page_size: Option<i32>,
+    pub page: Option<usize>,
+    pub page_size: Option<usize>,
 }
 
 impl QueryParams for ConfigQueryParams {
-    fn page(&self) -> i32 {
+    fn page(&self) -> usize {
         self.page.or(DEFAULT_PAGE).unwrap_or_default()
     }
-
-    fn page_size(&self) -> i32 {
+    fn page_size(&self) -> usize {
         self.page_size.or(DEFAULT_PAGE_SIZE).unwrap_or_default()
     }
 }

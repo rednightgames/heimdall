@@ -14,6 +14,6 @@ impl Container {
 
 impl Default for Container {
     fn default() -> Self {
-        Self::new()
+        Container::new()
     }
 }
