@@ -1,7 +1,7 @@
-use actix_web::{web, HttpResponse};
-use validator::Validate;
 use crate::api::dto::config::{ConfigDTO, CreateConfigDTO};
 use crate::domain::{error::ApiError, services::config::ConfigService};
+use actix_web::{web, HttpResponse};
+use validator::Validate;
 
 pub async fn create_config_handler(
     config_service: web::Data<dyn ConfigService>,
@@ -11,7 +11,7 @@ pub async fn create_config_handler(
         Ok(_) => {
             let config = config_service.create(json.into_inner().into()).await?;
             Ok(HttpResponse::Ok().json(ConfigDTO::from(config)))
-        },
+        }
         Err(err) => Ok(HttpResponse::BadRequest().json(err)),
     }
 }
