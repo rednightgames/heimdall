@@ -8,6 +8,7 @@ use async_trait::async_trait;
 pub struct ConfigQueryParams {
     pub page: Option<usize>,
     pub page_size: Option<usize>,
+    pub environment: String
 }
 
 impl QueryParams for ConfigQueryParams {

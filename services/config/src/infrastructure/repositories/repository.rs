@@ -43,7 +43,7 @@ impl ConfigRepository for ConfigS3Repository {
 
         let (res, _) = self
             .bucket
-            .list_page(String::from("stage/"), Option::from(String::from("/")), None, None, Option::from(params.page_size()))
+            .list_page(format!("{}/", params.environment), Option::from(String::from("/")), None, None, Option::from(params.page_size()))
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
@@ -51,13 +51,19 @@ impl ConfigRepository for ConfigS3Repository {
         println!("{}", base64_url::encode(res.next_continuation_token.unwrap().as_str()));
 
         for obj in res.contents {
-            let filename = obj.key.strip_suffix(".json").unwrap_or_default();
+            let filename = obj.key.strip_prefix(format!("{}/", params.environment).as_str()).unwrap().strip_suffix(".json").unwrap();
 
-            let id = String::from(filename)
+            let filename_parts: Vec<&str> = filename.split('.').collect();
+
+            let id_str = filename_parts[0];
+            let name = String::from(filename_parts[1]);
+            let environment = params.environment.clone();
+
+            let id: u64 = String::from(id_str)
                 .parse::<u64>()
                 .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
-            let timeshtamp = obj
+            let created_at = obj
                 .last_modified
                 .parse::<DateTime<Utc>>()
                 .map_err(|err| S3RepositoryError::from(err).into_inner())?
@@ -65,10 +71,10 @@ impl ConfigRepository for ConfigS3Repository {
 
             configs.push(Config {
                 id,
-                name: String::from(""),
+                name,
                 config: String::from(""),
-                environment: String::from("value"),
-                created_at: timeshtamp,
+                environment,
+                created_at,
             });
         }
 

@@ -12,10 +12,15 @@ async fn main() -> std::io::Result<()> {
 
     let svc = ConfigServiceImpl::new(Generator::default(), Arc::new(repository));
 
-    match svc.list(ConfigQueryParams {page: None, page_size: Option::from(5)}).await {
-        Ok(b) => b,
-        Err(e) => panic!("{}", e),
-    };
+    let list = svc.list(ConfigQueryParams {page: None, page_size: Option::from(5), environment: String::from("develop")}).await.unwrap();
+
+    for item in list.items {
+        println!("id:          {}", item.id);
+        println!("name:        {}", item.name);
+        println!("environment: {}", item.environment);
+        println!("created_at:  {}", item.created_at);
+        println!();
+    }
 
     /*
     let repository = ConfigR2Repository::new(bucket.clone());
