@@ -20,21 +20,36 @@ impl ConfigS3Repository {
 #[async_trait]
 impl ConfigRepository for ConfigS3Repository {
     async fn create(&self, id: ID, new_config: &CreateConfig) -> RepositoryResult<Config> {
+        let cloned = new_config.clone();
+        
         self.bucket
             .put_object_with_content_type(
-                format!("{}/{}.{}.json", new_config.environment, id, new_config.name),
-                new_config.config.as_bytes(),
+                format!("{}/{}.{}.json", cloned.environment, id, cloned.name),
+                cloned.config.as_bytes(),
                 "application/json",
             )
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
+        let (data, _) = self
+            .bucket
+            .head_object(format!(
+                "{}/{}.{}.json",
+                cloned.environment, id, cloned.name
+            ))
+            .await
+            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+
+        let created_at = DateTime::parse_from_rfc2822(data.last_modified.unwrap().as_str())
+            .map_err(|err| S3RepositoryError::from(err).into_inner())?
+            .timestamp_millis();
+
         Ok(Config {
-            id: 0,
-            name: String::from("value"),
-            config: String::from(""),
-            environment: String::from("value"),
-            created_at: 0,
+            id,
+            name: cloned.name,
+            config: cloned.config,
+            environment: cloned.environment,
+            created_at,
         })
     }
 

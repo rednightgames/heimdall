@@ -591,6 +591,7 @@ dependencies = [
  "chrono",
  "id",
  "lazy_static",
+ "regex",
  "rust-s3",
  "serde",
  "serde_json",

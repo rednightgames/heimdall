@@ -1,16 +1,30 @@
 use crate::domain::models::config::Config;
 use crate::domain::models::id::ID;
 use crate::domain::{models::config::CreateConfig, repositories::repository::ResultPaging};
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
+lazy_static! {
+    static ref UPPER_LOWER_DASH: Regex = Regex::new(r"^[a-zA-Z0-9\-]+$").unwrap();
+}
+
 #[derive(Serialize, Deserialize, Validate)]
 pub struct CreateConfigDTO {
-    #[validate(required, length(min = 1))]
+    #[validate(
+        required,
+        length(min = 1),
+        regex(path = "UPPER_LOWER_DASH", code = "Invalid service name")
+    )]
     pub name: Option<String>,
     #[validate(required, length(min = 1))]
     pub config: Option<String>,
-    #[validate(required, length(min = 1))]
+    #[validate(
+        required,
+        length(min = 1),
+        regex(path = "UPPER_LOWER_DASH", code = "Invalid environment name")
+    )]
     pub environment: Option<String>,
 }
 

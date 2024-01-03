@@ -32,3 +32,4 @@ base64-url = "2.0.2"
 id = { path = "../../packages/id" }
 
 validator = { version = "0.16.1", features = ["derive"] }
+regex = "1.8.4"
