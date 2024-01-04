@@ -1,0 +1,25 @@
+[package]
+name = "gateway"
+description = "Reverse proxy edge server"
+authors = ["Dmitriy Chukhno <dmitr1sdadaya@protonmail.com>"]
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0"
+
+[[bin]]
+path = "src/main.rs"
+name = "gateway"
+
+[dependencies]
+actix = "0.13.1"
+actix-web = "4.4.1"
+actix-rt = "2.9.0"
+actix-multipart = "0.6.1"
+actix-cors = "0.6.5"
+actix-ws = "0.2.5"
+actix-files = "0.6.2"
+
+tokio = { version = "1.35.1", features = ["full"] }
+tokio-stream = "0.1.14"
+
+futures = "0.3.30"
