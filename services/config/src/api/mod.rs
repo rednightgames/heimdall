@@ -1,3 +1,5 @@
 pub mod controllers;
 pub mod dto;
 pub mod error;
+pub mod grpc;
+pub mod proto;

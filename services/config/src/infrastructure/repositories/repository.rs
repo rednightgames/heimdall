@@ -21,7 +21,7 @@ impl ConfigS3Repository {
 impl ConfigRepository for ConfigS3Repository {
     async fn create(&self, id: ID, new_config: &CreateConfig) -> RepositoryResult<Config> {
         let cloned = new_config.clone();
-        
+
         self.bucket
             .put_object_with_content_type(
                 format!("{}/{}.{}.json", cloned.environment, id, cloned.name),
