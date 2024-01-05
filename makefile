@@ -3,13 +3,16 @@ IMAGES_TAG = ${shell git describe --exact-match 2> /dev/null || echo "latest"}
 
 IMAGE_DIRS = $(wildcard services/*)
 
-.PHONY: all ${IMAGE_DIRS} packages lint
+.PHONY: all ${IMAGE_DIRS} proto packages lint
 
-all: ${IMAGE_DIRS} packages
+all: ${IMAGE_DIRS} proto packages
 
-${IMAGE_DIRS}: packages
+${IMAGE_DIRS}: proto packages
 	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))
 	docker build -t heimdall/${IMAGE_NAME}:${IMAGES_TAG} -t heimdall/${IMAGE_NAME}:latest --build-arg TAG=${IMAGES_TAG} -- $@
+
+proto:
+	docker build -t heimdall/proto:${IMAGES_TAG} -t heimdall/proto:latest --build-arg TAG=${IMAGES_TAG} --build-arg GIT_SHA=${GIT_SHA} $@
 
 packages:
 	docker build -t heimdall/base:${IMAGES_TAG} -t heimdall/base:latest --build-arg TAG=${IMAGES_TAG} --build-arg GIT_SHA=${GIT_SHA} $@
