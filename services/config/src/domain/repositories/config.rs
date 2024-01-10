@@ -1,19 +1,25 @@
 use super::repository::{
-    QueryParams, RepositoryResult, ResultPaging, DEFAULT_PAGE, DEFAULT_PAGE_SIZE,
+    QueryParams, RepositoryResult, ResultPaging, DEFAULT_NEXT_PAGE, DEFAULT_PAGE_SIZE,
 };
 use crate::domain::models::config::{Config, CreateConfig};
 use crate::domain::models::id::ID;
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ConfigQueryParams {
-    pub page: Option<usize>,
+    pub next_page: Option<String>,
     pub page_size: Option<usize>,
-    pub environment: String,
+    pub environment: Option<String>,
+    pub query: Option<String>,
 }
 
 impl QueryParams for ConfigQueryParams {
-    fn page(&self) -> usize {
-        self.page.or(DEFAULT_PAGE).unwrap_or_default()
+    fn next_page(&self) -> String {
+        self.next_page
+            .clone()
+            .or(DEFAULT_NEXT_PAGE)
+            .unwrap_or_default()
     }
     fn page_size(&self) -> usize {
         self.page_size.or(DEFAULT_PAGE_SIZE).unwrap_or_default()

@@ -55,11 +55,22 @@ impl ConfigRepository for ConfigS3Repository {
 
     async fn list(&self, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>> {
         let mut configs: Vec<Config> = vec![];
+        let environment = params.environment.clone().unwrap_or_default();
+        let mut prefix = String::default();
+        if params.environment.is_some() {
+            prefix.push_str(format!("{}/", environment).as_str());
+        }
+        if params.query.is_some() {
+            prefix.push_str(params.query.clone().unwrap().as_str());
+        }
+        //let prefix = format!("{}/{}", environment, params.query.clone().unwrap_or_default());
 
-        let (res, _) = self
+        println!("{}", prefix.clone());
+
+        let (res, code) = self
             .bucket
             .list_page(
-                format!("{}/", params.environment),
+                prefix.clone(),
                 Option::from(String::from("/")),
                 None,
                 None,
@@ -68,16 +79,23 @@ impl ConfigRepository for ConfigS3Repository {
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
+        println!("{}", code);
         println!("{}", params.page_size());
         println!(
             "{}",
-            base64_url::encode(res.next_continuation_token.unwrap().as_str())
+            base64_url::encode(res.next_continuation_token.unwrap_or_default().as_str())
         );
+
+        for obj in res.common_prefixes {
+            for o in obj {
+                println!("{}", o.prefix);
+            }
+        }
 
         for obj in res.contents {
             let filename = obj
                 .key
-                .strip_prefix(format!("{}/", params.environment).as_str())
+                .strip_prefix(format!("{}/", environment).as_str())
                 .unwrap()
                 .strip_suffix(".json")
                 .unwrap();
@@ -86,7 +104,6 @@ impl ConfigRepository for ConfigS3Repository {
 
             let id_str = filename_parts[0];
             let name = String::from(filename_parts[1]);
-            let environment = params.environment.clone();
 
             let id: u64 = String::from(id_str)
                 .parse::<u64>()
@@ -101,8 +118,8 @@ impl ConfigRepository for ConfigS3Repository {
             configs.push(Config {
                 id,
                 name,
-                config: String::from(""),
-                environment,
+                config: String::default(),
+                environment: String::default(),
                 created_at,
             });
         }

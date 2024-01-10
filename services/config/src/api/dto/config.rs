@@ -41,7 +41,6 @@ pub struct ConfigDTO {
 pub struct ListConfigDTO {
     pub id: ID,
     pub name: String,
-    pub environment: String,
     pub created_at: i64,
 }
 
@@ -72,7 +71,6 @@ impl From<Config> for ListConfigDTO {
         ListConfigDTO {
             id: config.id,
             name: config.name,
-            environment: config.environment,
             created_at: config.created_at,
         }
     }
