@@ -21,10 +21,7 @@ impl EnvironmentS3Repository {
 impl EnvironmentRepository for EnvironmentS3Repository {
     async fn create(&self, id: ID, new_env: &CreateEnvironment) -> RepositoryResult<Environment> {
         let cloned = new_env.clone();
-        let env_file = format!(
-            r#"{{"name": "{}"}}"#,
-            cloned.name
-        );
+        let env_file = format!(r#"{{"name": "{}"}}"#, cloned.name);
 
         self.bucket
             .put_object_with_content_type(
@@ -72,10 +69,17 @@ impl EnvironmentRepository for EnvironmentS3Repository {
 
         if let Some(obj) = res.common_prefixes {
             for o in obj {
-                envs.push(Environment {
-                    id: 0,
-                    name: String::from(o.prefix.strip_suffix('/').unwrap()),
-                })
+                let name_parts: Vec<&str> =
+                    o.prefix.strip_suffix('/').unwrap().split('.').collect();
+
+                let id_str = name_parts[0];
+                let name = String::from(name_parts[1]);
+
+                let id: u64 = String::from(id_str)
+                    .parse::<u64>()
+                    .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+
+                envs.push(Environment { id, name })
             }
         }
 

@@ -21,7 +21,7 @@ pub struct CreateEnvironmentDTO {
     #[validate(
         required,
         length(min = 1),
-        regex(path = "UPPER_LOWER_DASH", code = "Invalid service name")
+        regex(path = "UPPER_LOWER_DASH", code = "Invalid environment name")
     )]
     pub name: Option<String>,
 }
