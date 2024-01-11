@@ -150,6 +150,7 @@ impl ConfigRepository for ConfigS3Repository {
     }
 
     async fn delete(&self, config_id: ID) -> RepositoryResult<()> {
+        println!("{}", config_id);
         Ok(())
     }
 }

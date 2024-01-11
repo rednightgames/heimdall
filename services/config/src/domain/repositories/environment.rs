@@ -1,4 +1,5 @@
-use crate::domain::models::environment::Environment;
+use crate::domain::models::environment::{CreateEnvironment, Environment};
+use crate::domain::models::id::ID;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
@@ -26,6 +27,7 @@ impl QueryParams for EnvironmentQueryParams {
 
 #[async_trait]
 pub trait EnvironmentRepository: Send + Sync {
+    async fn create(&self, id: ID, new_env: &CreateEnvironment) -> RepositoryResult<Environment>;
     async fn list(
         &self,
         params: EnvironmentQueryParams,

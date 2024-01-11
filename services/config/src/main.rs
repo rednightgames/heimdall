@@ -1,6 +1,8 @@
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use config::api::controllers::config_handler::{create_config_handler, list_config_handler};
-use config::api::controllers::environment_handler::list_environment_handler;
+use config::api::controllers::environment_handler::{
+    create_environment_handler, list_environment_handler,
+};
 use config::api::error::not_found;
 use config::api::grpc::config::ConfigService;
 use config::api::proto::config::config_server::ConfigServer;
@@ -31,7 +33,11 @@ async fn main() -> std::io::Result<()> {
                     .route("", web::post().to(create_config_handler))
                     .route("", web::get().to(list_config_handler)),
             )
-            .service(web::scope("/environment").route("", web::get().to(list_environment_handler)))
+            .service(
+                web::scope("/environment")
+                    .route("", web::post().to(create_environment_handler))
+                    .route("", web::get().to(list_environment_handler)),
+            )
             .default_service(web::to(not_found))
     })
     .bind(("0.0.0.0", 6666))?

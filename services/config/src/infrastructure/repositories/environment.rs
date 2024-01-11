@@ -1,4 +1,5 @@
-use crate::domain::models::environment::Environment;
+use crate::domain::models::environment::{CreateEnvironment, Environment};
+use crate::domain::models::id::ID;
 use crate::domain::repositories::environment::{EnvironmentQueryParams, EnvironmentRepository};
 use crate::domain::repositories::repository::{QueryParams, RepositoryResult, ResultPaging};
 use crate::infrastructure::databases::s3::Bucket;
@@ -18,6 +19,28 @@ impl EnvironmentS3Repository {
 
 #[async_trait]
 impl EnvironmentRepository for EnvironmentS3Repository {
+    async fn create(&self, id: ID, new_env: &CreateEnvironment) -> RepositoryResult<Environment> {
+        let cloned = new_env.clone();
+        let env_file = format!(
+            r#"{{"name": "{}"}}"#,
+            cloned.name
+        );
+
+        self.bucket
+            .put_object_with_content_type(
+                format!("{}.{}/environment.json", id, cloned.name),
+                env_file.as_bytes(),
+                "application/json",
+            )
+            .await
+            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+
+        Ok(Environment {
+            name: cloned.name,
+            id,
+        })
+    }
+
     async fn list(
         &self,
         params: EnvironmentQueryParams,

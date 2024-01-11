@@ -10,6 +10,15 @@ lazy_static! {
     static ref UPPER_LOWER_DASH: Regex = Regex::new(r"^[a-zA-Z0-9\-]+$").unwrap();
 }
 
+#[derive(Debug, Serialize)]
+pub struct ConfigDTO {
+    pub id: ID,
+    pub name: String,
+    pub config: String,
+    pub environment: String,
+    pub created_at: i64,
+}
+
 #[derive(Serialize, Deserialize, Validate)]
 pub struct CreateConfigDTO {
     #[validate(
@@ -26,15 +35,6 @@ pub struct CreateConfigDTO {
         regex(path = "UPPER_LOWER_DASH", code = "Invalid environment name")
     )]
     pub environment: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ConfigDTO {
-    pub id: ID,
-    pub name: String,
-    pub config: String,
-    pub environment: String,
-    pub created_at: i64,
 }
 
 #[derive(Debug, Serialize)]

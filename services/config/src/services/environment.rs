@@ -1,5 +1,5 @@
 use crate::domain::error::CommonError;
-use crate::domain::models::environment::Environment;
+use crate::domain::models::environment::{CreateEnvironment, Environment};
 use crate::domain::repositories::environment::{EnvironmentQueryParams, EnvironmentRepository};
 use crate::domain::repositories::repository::ResultPaging;
 use crate::domain::services::environment::EnvironmentService;
@@ -24,6 +24,15 @@ impl EnvironmentServiceImpl {
 
 #[async_trait]
 impl EnvironmentService for EnvironmentServiceImpl {
+    async fn create(&self, env: CreateEnvironment) -> Result<Environment, CommonError> {
+        let cloned = env.clone();
+        let id = self.identifier.clone().generate();
+
+        self.repository
+            .create(id, &cloned)
+            .await
+            .map_err(CommonError::from)
+    }
     async fn list(
         &self,
         params: EnvironmentQueryParams,
