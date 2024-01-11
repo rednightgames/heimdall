@@ -56,10 +56,16 @@ impl ConfigRepository for ConfigS3Repository {
 
     async fn list(&self, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>> {
         let mut configs: Vec<Config> = vec![];
-        let mut next_token = None;
+        let mut curr_page = None;
 
         if !params.next_page().is_empty() {
-            next_token = Option::from(String::from_utf8(base64_url::decode(params.next_page().as_str()).map_err(|err| DecodeError::from(err).into_inner())?).unwrap())
+            curr_page = Option::from(
+                String::from_utf8(
+                    base64_url::decode(params.next_page().as_str())
+                        .map_err(|err| DecodeError::from(err).into_inner())?,
+                )
+                .unwrap(),
+            )
         }
 
         let environment = params.environment.clone().unwrap_or_default();
@@ -79,18 +85,20 @@ impl ConfigRepository for ConfigS3Repository {
             .list_page(
                 prefix.clone(),
                 Option::from(String::from("/")),
-                next_token,
+                curr_page,
                 None,
                 Option::from(params.page_size()),
             )
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
-            let mut next_page = None;
+        let mut next_page = None;
 
-            if res.next_continuation_token.is_some() {
-                next_page = Option::from(base64_url::encode(res.next_continuation_token.unwrap_or_default().as_str()))
-            }
+        if res.next_continuation_token.is_some() {
+            next_page = Option::from(base64_url::encode(
+                res.next_continuation_token.unwrap_or_default().as_str(),
+            ))
+        }
 
         for obj in res.contents {
             let filename = obj
@@ -127,7 +135,7 @@ impl ConfigRepository for ConfigS3Repository {
         Ok(ResultPaging {
             code: 0,
             items: configs,
-            next_page
+            next_page,
         })
     }
 

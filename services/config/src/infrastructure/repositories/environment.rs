@@ -2,7 +2,7 @@ use crate::domain::models::environment::Environment;
 use crate::domain::repositories::environment::{EnvironmentQueryParams, EnvironmentRepository};
 use crate::domain::repositories::repository::{QueryParams, RepositoryResult, ResultPaging};
 use crate::infrastructure::databases::s3::Bucket;
-use crate::infrastructure::error::{S3RepositoryError, DecodeError};
+use crate::infrastructure::error::{DecodeError, S3RepositoryError};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -23,10 +23,16 @@ impl EnvironmentRepository for EnvironmentS3Repository {
         params: EnvironmentQueryParams,
     ) -> RepositoryResult<ResultPaging<Environment>> {
         let mut envs: Vec<Environment> = vec![];
-        let mut next_token = None;
+        let mut curr_page = None;
 
         if !params.next_page().is_empty() {
-            next_token = Option::from(String::from_utf8(base64_url::decode(params.next_page().as_str()).map_err(|err| DecodeError::from(err).into_inner())?).unwrap())
+            curr_page = Option::from(
+                String::from_utf8(
+                    base64_url::decode(params.next_page().as_str())
+                        .map_err(|err| DecodeError::from(err).into_inner())?,
+                )
+                .unwrap(),
+            )
         }
 
         let (res, _) = self
@@ -34,7 +40,7 @@ impl EnvironmentRepository for EnvironmentS3Repository {
             .list_page(
                 String::default(),
                 Option::from(String::from("/")),
-                next_token,
+                curr_page,
                 None,
                 Option::from(params.page_size()),
             )
@@ -53,13 +59,15 @@ impl EnvironmentRepository for EnvironmentS3Repository {
         let mut next_page = None;
 
         if res.next_continuation_token.is_some() {
-            next_page = Option::from(base64_url::encode(res.next_continuation_token.unwrap_or_default().as_str()))
+            next_page = Option::from(base64_url::encode(
+                res.next_continuation_token.unwrap_or_default().as_str(),
+            ))
         }
 
         Ok(ResultPaging {
             code: 0,
             items: envs,
-            next_page
+            next_page,
         })
     }
 }
