@@ -2,6 +2,7 @@ use crate::domain::models::config::CreateConfig;
 use crate::domain::models::{config::Config, id::ID};
 use crate::domain::repositories::config::{ConfigQueryParams, ConfigRepository};
 use crate::domain::repositories::repository::{QueryParams, RepositoryResult, ResultPaging};
+use crate::infrastructure::error::DecodeError;
 use crate::infrastructure::{databases::s3::Bucket, error::S3RepositoryError};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -55,6 +56,12 @@ impl ConfigRepository for ConfigS3Repository {
 
     async fn list(&self, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>> {
         let mut configs: Vec<Config> = vec![];
+        let mut next_token = None;
+
+        if !params.next_page().is_empty() {
+            next_token = Option::from(String::from_utf8(base64_url::decode(params.next_page().as_str()).map_err(|err| DecodeError::from(err).into_inner())?).unwrap())
+        }
+
         let environment = params.environment.clone().unwrap_or_default();
         let mut prefix = String::default();
         if params.environment.is_some() {
@@ -67,30 +74,23 @@ impl ConfigRepository for ConfigS3Repository {
 
         println!("{}", prefix.clone());
 
-        let (res, code) = self
+        let (res, _) = self
             .bucket
             .list_page(
                 prefix.clone(),
                 Option::from(String::from("/")),
-                None,
+                next_token,
                 None,
                 Option::from(params.page_size()),
             )
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
-        println!("{}", code);
-        println!("{}", params.page_size());
-        println!(
-            "{}",
-            base64_url::encode(res.next_continuation_token.unwrap_or_default().as_str())
-        );
+            let mut next_page = None;
 
-        for obj in res.common_prefixes {
-            for o in obj {
-                println!("{}", o.prefix);
+            if res.next_continuation_token.is_some() {
+                next_page = Option::from(base64_url::encode(res.next_continuation_token.unwrap_or_default().as_str()))
             }
-        }
 
         for obj in res.contents {
             let filename = obj
@@ -127,6 +127,7 @@ impl ConfigRepository for ConfigS3Repository {
         Ok(ResultPaging {
             code: 0,
             items: configs,
+            next_page
         })
     }
 

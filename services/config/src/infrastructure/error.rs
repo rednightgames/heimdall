@@ -38,3 +38,19 @@ impl From<chrono::ParseError> for S3RepositoryError {
         })
     }
 }
+
+pub struct DecodeError(RepositoryError);
+
+impl DecodeError {
+    pub fn into_inner(self) -> RepositoryError {
+        self.0
+    }
+}
+
+impl From<base64_url::base64::DecodeError> for DecodeError {
+    fn from(error: base64_url::base64::DecodeError) -> Self {
+        DecodeError(RepositoryError {
+            message: error.to_string(),
+        })
+    }
+}

@@ -85,6 +85,7 @@ impl From<ResultPaging<Config>> for ResultPaging<ListConfigDTO> {
                 .map(|config: Config| ListConfigDTO::from(config))
                 .collect(),
             code: configs.code,
+            next_page: configs.next_page,
         }
     }
 }

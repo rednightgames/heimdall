@@ -14,8 +14,7 @@ pub struct EnvironmentQueryParams {
 
 impl QueryParams for EnvironmentQueryParams {
     fn next_page(&self) -> String {
-        self.next_page
-            .clone()
+        self.next_page.clone()
             .or(DEFAULT_NEXT_PAGE)
             .unwrap_or_default()
     }

@@ -27,6 +27,7 @@ impl From<ResultPaging<Environment>> for ResultPaging<ListEnvironmentDTO> {
                 .map(|env: Environment| ListEnvironmentDTO::from(env))
                 .collect(),
             code: envs.code,
+            next_page: envs.next_page,
         }
     }
 }

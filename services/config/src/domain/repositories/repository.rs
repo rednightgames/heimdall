@@ -7,6 +7,7 @@ pub type RepositoryResult<T> = Result<T, RepositoryError>;
 pub struct ResultPaging<T> {
     pub code: i64,
     pub items: Vec<T>,
+    pub next_page: Option<String>,
 }
 
 pub const DEFAULT_NEXT_PAGE: Option<String> = None;
