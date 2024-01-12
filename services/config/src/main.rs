@@ -3,7 +3,7 @@ use config::api::controllers::config_handler::{create_config_handler, list_confi
 use config::api::controllers::environment_handler::{
     create_environment_handler, list_environment_handler,
 };
-use config::api::error::not_found;
+use config::api::error::{not_found, HttpError};
 use config::api::grpc::config::ConfigService;
 use config::api::proto::config::config_server::ConfigServer;
 use config::container::Container;
@@ -25,6 +25,14 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .app_data(
+                web::JsonConfig::default()
+                    .error_handler(|err, _req| HttpError::Json(err.to_string()).into()),
+            )
+            .app_data(
+                web::QueryConfig::default()
+                    .error_handler(|err, _req| HttpError::Query(err.to_string()).into()),
+            )
             .app_data(web::Data::from(config_service.clone()))
             .app_data(web::Data::from(environment_service.clone()))
             .wrap(Logger::default())
