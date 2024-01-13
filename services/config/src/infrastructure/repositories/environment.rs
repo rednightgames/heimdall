@@ -27,7 +27,7 @@ impl EnvironmentRepository for EnvironmentS3Repository {
             .put_object_with_content_type(
                 format!("{}.{}/environment.json", id, cloned.name),
                 env_file.as_bytes(),
-                "application/json",
+                "application/rednight.manifest",
             )
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;

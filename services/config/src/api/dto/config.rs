@@ -15,7 +15,7 @@ pub struct ConfigDTO {
     pub id: ID,
     pub name: String,
     pub config: String,
-    pub environment: String,
+    pub environment: ID,
     pub created_at: i64,
 }
 
@@ -29,12 +29,8 @@ pub struct CreateConfigDTO {
     pub name: Option<String>,
     #[validate(required, length(min = 1))]
     pub config: Option<String>,
-    #[validate(
-        required,
-        length(min = 1),
-        regex(path = "UPPER_LOWER_DASH", code = "Invalid environment name")
-    )]
-    pub environment: Option<String>,
+    #[validate(required)]
+    pub environment: Option<ID>,
 }
 
 #[derive(Debug, Serialize)]

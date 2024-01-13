@@ -32,7 +32,7 @@ impl ConfigRepository for ConfigS3Repository {
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
-        let (data, _) = self
+        let (data, _code) = self
             .bucket
             .head_object(format!(
                 "{}/{}.{}.json",
@@ -80,7 +80,7 @@ impl ConfigRepository for ConfigS3Repository {
 
         println!("{}", prefix.clone());
 
-        let (res, _) = self
+        let (res, _code) = self
             .bucket
             .list_page(
                 prefix.clone(),
@@ -127,7 +127,7 @@ impl ConfigRepository for ConfigS3Repository {
                 id,
                 name,
                 config: String::default(),
-                environment: String::default(),
+                environment: 0,
                 created_at,
             });
         }
@@ -144,7 +144,7 @@ impl ConfigRepository for ConfigS3Repository {
             id: config_id,
             name: String::from(""),
             config: String::from(""),
-            environment: String::from("value"),
+            environment: 0,
             created_at: 0,
         })
     }

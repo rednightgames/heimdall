@@ -1,10 +1,11 @@
-use crate::domain::models::{config::Config, id::ID};
+use crate::domain::models::config::Config;
+use crate::domain::models::id::ID;
 
 pub struct ConfigS3 {
     pub id: ID,
     pub name: String,
     pub config: String,
-    pub environment: String,
+    pub environment: ID,
     pub created_at: i64,
 }
 
