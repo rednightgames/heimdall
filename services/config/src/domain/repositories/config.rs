@@ -5,11 +5,13 @@ use crate::domain::models::config::{Config, CreateConfig};
 use crate::domain::models::id::ID;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Validate)]
 pub struct ConfigQueryParams {
     pub next_page: Option<String>,
     pub page_size: Option<usize>,
+    #[validate(required)]
     pub environment: Option<String>,
     pub query: Option<String>,
 }

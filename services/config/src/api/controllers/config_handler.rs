@@ -11,7 +11,6 @@ pub async fn create_config_handler(
 ) -> Result<actix_web::HttpResponse, ApiError> {
     match json.validate() {
         Ok(_) => {
-            println!("{}", json.environment.unwrap());
             let config = config_service.create(json.into_inner().into()).await?;
             Ok(HttpResponse::Ok().json(ConfigDTO::from(config)))
         }
@@ -22,7 +21,12 @@ pub async fn create_config_handler(
 pub async fn list_config_handler(
     config_service: web::Data<dyn ConfigService>,
     params: web::Query<ConfigQueryParams>,
-) -> Result<web::Json<ResultPaging<ListConfigDTO>>, ApiError> {
-    let configs = config_service.list(params.into_inner()).await?;
-    Ok(web::Json(configs.into()))
+) -> Result<actix_web::HttpResponse, ApiError> {
+    match params.validate() {
+        Ok(_) => {
+            let configs = config_service.list(params.into_inner()).await?;
+            Ok(HttpResponse::Ok().json(Into::<ResultPaging<ListConfigDTO>>::into(configs)))
+        }
+        Err(err) => Ok(HttpResponse::BadRequest().json(err)),
+    }
 }

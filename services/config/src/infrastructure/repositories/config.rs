@@ -1,12 +1,13 @@
+use crate::domain::error::RepositoryError;
 use crate::domain::models::config::CreateConfig;
 use crate::domain::models::{config::Config, id::ID};
 use crate::domain::repositories::config::{ConfigQueryParams, ConfigRepository};
 use crate::domain::repositories::repository::{QueryParams, RepositoryResult, ResultPaging};
+use crate::infrastructure::databases::s3::Bucket;
 use crate::infrastructure::error::DecodeError;
-use crate::infrastructure::{databases::s3::Bucket, error::S3RepositoryError};
+use crate::infrastructure::error::S3RepositoryError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use log::info;
 use std::sync::Arc;
 
 pub struct ConfigS3Repository {
@@ -23,37 +24,44 @@ impl ConfigS3Repository {
 impl ConfigRepository for ConfigS3Repository {
     async fn create(&self, id: ID, new_config: &CreateConfig) -> RepositoryResult<Config> {
         let cloned = new_config.clone();
-        
-        info!("id {}", id);
-        info!("environment {}", cloned.environment);
 
-        let (res, code) = self.bucket.list_page(format!("{}", cloned.environment), None, None, None, Option::from(1))
+        let (res, _code) = self
+            .bucket
+            .list_page(
+                format!("{}", cloned.environment),
+                None,
+                None,
+                None,
+                Option::from(1),
+            )
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
-        println!("{}", res.prefix.unwrap());
+        let environment = if let Some(environment_obj) = res.contents.first() {
+            if let Some(index) = environment_obj.key.find('/') {
+                let result = &environment_obj.key[0..index];
+                result.to_string()
+            } else {
+                environment_obj.key.to_string()
+            }
+        } else {
+            return Err(RepositoryError {
+                message: String::from("Environment not found"),
+            });
+        };
 
-        println!("res.contents");
-        for obj in res.contents {
-            println!("{}", obj.key);
-        }
-
-        /*
         self.bucket
             .put_object_with_content_type(
-                format!("{}/{}.{}.json", cloned.environment, id, cloned.name),
+                format!("{}/{}.{}.json", environment, id, cloned.name),
                 cloned.config.as_bytes(),
-                "application/json",
+                "application/rednight.config",
             )
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
         let (data, _code) = self
             .bucket
-            .head_object(format!(
-                "{}/{}.{}.json",
-                cloned.environment, id, cloned.name
-            ))
+            .head_object(format!("{}/{}.{}.json", environment, id, cloned.name))
             .await
             .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
@@ -61,14 +69,12 @@ impl ConfigRepository for ConfigS3Repository {
             .map_err(|err| S3RepositoryError::from(err).into_inner())?
             .timestamp_millis();
 
-         */
-
         Ok(Config {
             id,
             name: cloned.name,
             config: cloned.config,
             environment: cloned.environment,
-            created_at: 0,
+            created_at,
         })
     }
 
@@ -86,17 +92,42 @@ impl ConfigRepository for ConfigS3Repository {
             )
         }
 
-        let environment = params.environment.clone().unwrap_or_default();
-        let mut prefix = String::default();
+        let mut environment = String::default();
+
         if params.environment.is_some() {
+            let (res, _code) = self
+                .bucket
+                .list_page(
+                    params.clone().environment.unwrap(),
+                    None,
+                    None,
+                    None,
+                    Option::from(1),
+                )
+                .await
+                .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+
+            environment = if let Some(environment_obj) = res.contents.first() {
+                if let Some(index) = environment_obj.key.find('/') {
+                    let result = &environment_obj.key[0..index];
+                    result.to_string()
+                } else {
+                    environment_obj.key.to_string()
+                }
+            } else {
+                return Err(RepositoryError {
+                    message: String::from("Environment not found"),
+                });
+            };
+        }
+
+        let mut prefix = String::default();
+        if params.clone().environment.is_some() {
             prefix.push_str(format!("{}/", environment).as_str());
         }
         if params.query.is_some() {
             prefix.push_str(params.query.clone().unwrap().as_str());
         }
-        //let prefix = format!("{}/{}", environment, params.query.clone().unwrap_or_default());
-
-        println!("{}", prefix.clone());
 
         let (res, _code) = self
             .bucket
@@ -126,6 +157,10 @@ impl ConfigRepository for ConfigS3Repository {
                 .strip_suffix(".json")
                 .unwrap();
 
+            if filename == "environment" {
+                continue;
+            }
+
             let filename_parts: Vec<&str> = filename.split('.').collect();
 
             let id_str = filename_parts[0];
@@ -134,6 +169,8 @@ impl ConfigRepository for ConfigS3Repository {
             let id: u64 = String::from(id_str)
                 .parse::<u64>()
                 .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+
+            println!("{:?}", obj);
 
             let created_at = obj
                 .last_modified
