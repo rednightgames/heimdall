@@ -170,8 +170,6 @@ impl ConfigRepository for ConfigS3Repository {
                 .parse::<u64>()
                 .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
-            println!("{:?}", obj);
-
             let created_at = obj
                 .last_modified
                 .parse::<DateTime<Utc>>()
