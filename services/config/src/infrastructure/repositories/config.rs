@@ -6,6 +6,7 @@ use crate::infrastructure::error::DecodeError;
 use crate::infrastructure::{databases::s3::Bucket, error::S3RepositoryError};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use log::info;
 use std::sync::Arc;
 
 pub struct ConfigS3Repository {
@@ -22,7 +23,22 @@ impl ConfigS3Repository {
 impl ConfigRepository for ConfigS3Repository {
     async fn create(&self, id: ID, new_config: &CreateConfig) -> RepositoryResult<Config> {
         let cloned = new_config.clone();
+        
+        info!("id {}", id);
+        info!("environment {}", cloned.environment);
 
+        let (res, code) = self.bucket.list_page(format!("{}", cloned.environment), None, None, None, Option::from(1))
+            .await
+            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+
+        println!("{}", res.prefix.unwrap());
+
+        println!("res.contents");
+        for obj in res.contents {
+            println!("{}", obj.key);
+        }
+
+        /*
         self.bucket
             .put_object_with_content_type(
                 format!("{}/{}.{}.json", cloned.environment, id, cloned.name),
@@ -45,12 +61,14 @@ impl ConfigRepository for ConfigS3Repository {
             .map_err(|err| S3RepositoryError::from(err).into_inner())?
             .timestamp_millis();
 
+         */
+
         Ok(Config {
             id,
             name: cloned.name,
             config: cloned.config,
             environment: cloned.environment,
-            created_at,
+            created_at: 0,
         })
     }
 

@@ -11,6 +11,7 @@ pub async fn create_config_handler(
 ) -> Result<actix_web::HttpResponse, ApiError> {
     match json.validate() {
         Ok(_) => {
+            println!("{}", json.environment.unwrap());
             let config = config_service.create(json.into_inner().into()).await?;
             Ok(HttpResponse::Ok().json(ConfigDTO::from(config)))
         }
