@@ -1,15 +1,17 @@
+use super::repository::{
+    QueryParams, RepositoryResult, ResultPaging, DEFAULT_NEXT_PAGE, DEFAULT_PAGE_SIZE,
+};
 use crate::domain::models::environment::{CreateEnvironment, Environment};
 use crate::domain::models::id::ID;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
-use super::repository::{
-    QueryParams, RepositoryResult, ResultPaging, DEFAULT_NEXT_PAGE, DEFAULT_PAGE_SIZE,
-};
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct EnvironmentQueryParams {
+    #[validate(custom = "crate::api::validator::validate_next_page")]
     pub next_page: Option<String>,
+    #[validate(range(min = 5, max = 50))]
     pub page_size: Option<usize>,
 }
 

@@ -9,7 +9,9 @@ use validator::Validate;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Validate)]
 pub struct ConfigQueryParams {
+    #[validate(custom = "crate::api::validator::validate_next_page")]
     pub next_page: Option<String>,
+    #[validate(range(min = 5, max = 50))]
     pub page_size: Option<usize>,
     #[validate(required)]
     pub environment: Option<String>,
