@@ -42,9 +42,9 @@ impl ConfigService for ConfigServiceImpl {
             .map_err(CommonError::from)
     }
 
-    async fn get(&self, config_id: ID) -> Result<Config, CommonError> {
+    async fn get(&self, environment_id: ID, config_id: ID) -> Result<Config, CommonError> {
         self.repository
-            .get(config_id)
+            .get(environment_id, config_id)
             .await
             .map_err(CommonError::from)
     }

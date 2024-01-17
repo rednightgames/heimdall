@@ -9,6 +9,6 @@ use async_trait::async_trait;
 pub trait ConfigService: Sync + Send {
     async fn create(&self, config: CreateConfig) -> Result<Config, CommonError>;
     async fn list(&self, params: ConfigQueryParams) -> Result<ResultPaging<Config>, CommonError>;
-    async fn get(&self, config_id: ID) -> Result<Config, CommonError>;
+    async fn get(&self, environment_id: ID, config_id: ID) -> Result<Config, CommonError>;
     async fn delete(&self, config_id: ID) -> Result<(), CommonError>;
 }

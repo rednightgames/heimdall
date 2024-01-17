@@ -192,7 +192,7 @@ impl ConfigRepository for ConfigS3Repository {
         })
     }
 
-    async fn get(&self, config_id: ID) -> RepositoryResult<Config> {
+    async fn get(&self, environment_id: ID, config_id: ID) -> RepositoryResult<Config> {
         Ok(Config {
             id: config_id,
             name: String::from(""),
