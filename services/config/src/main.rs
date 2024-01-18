@@ -44,19 +44,17 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::from(environment_service.clone()))
             .wrap(Logger::default())
             .service(
-                web::scope("/config")
-                    .route("", web::post().to(create_config_handler))
-                    .route("", web::get().to(list_config_handler)),
-            )
-            .service(
-                web::scope("/environment")
+                web::scope("/environments")
                     .route("", web::post().to(create_environment_handler))
-                    .route("", web::get().to(list_environment_handler)),
-            )
-            .service(
-                web::scope("/environments").service(web::scope("/{environment_id}").service(
-                    web::scope("/configs").route("/{config_id}", web::get().to(get_config_handler)),
-                )),
+                    .route("", web::get().to(list_environment_handler))
+                    .service(
+                        web::scope("/{environment_id}").service(
+                            web::scope("/configs")
+                                .route("", web::post().to(create_config_handler))
+                                .route("", web::get().to(list_config_handler))
+                                .route("/{config_id}", web::get().to(get_config_handler)),
+                        ),
+                    ),
             )
             .default_service(web::to(not_found))
     })
