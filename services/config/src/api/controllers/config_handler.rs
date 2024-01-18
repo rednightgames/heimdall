@@ -28,7 +28,9 @@ pub async fn list_config_handler(
 
     match params.validate() {
         Ok(_) => {
-            let configs = config_service.list(environment_id, params.into_inner()).await?;
+            let configs = config_service
+                .list(environment_id, params.into_inner())
+                .await?;
             Ok(HttpResponse::Ok().json(Into::<ResultPaging<ListConfigDTO>>::into(configs)))
         }
         Err(err) => Ok(HttpResponse::BadRequest().json(err)),

@@ -35,7 +35,11 @@ impl ConfigService for ConfigServiceImpl {
             .map_err(CommonError::from)
     }
 
-    async fn list(&self, environment_id: ID, params: ConfigQueryParams) -> Result<ResultPaging<Config>, CommonError> {
+    async fn list(
+        &self,
+        environment_id: ID,
+        params: ConfigQueryParams,
+    ) -> Result<ResultPaging<Config>, CommonError> {
         self.repository
             .list(environment_id, params)
             .await

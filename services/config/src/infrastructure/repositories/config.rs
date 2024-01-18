@@ -78,7 +78,11 @@ impl ConfigRepository for ConfigS3Repository {
         })
     }
 
-    async fn list(&self, environment_id: ID, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>> {
+    async fn list(
+        &self,
+        environment_id: ID,
+        params: ConfigQueryParams,
+    ) -> RepositoryResult<ResultPaging<Config>> {
         let mut configs: Vec<Config> = vec![];
         let mut curr_page = None;
 
@@ -116,7 +120,6 @@ impl ConfigRepository for ConfigS3Repository {
                 message: String::from("Environment not found"),
             });
         };
-        
 
         let mut prefix = format!("{}/", environment);
         if params.query.is_some() {
