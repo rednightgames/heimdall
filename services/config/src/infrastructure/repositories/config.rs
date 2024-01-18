@@ -193,12 +193,83 @@ impl ConfigRepository for ConfigS3Repository {
     }
 
     async fn get(&self, environment_id: ID, config_id: ID) -> RepositoryResult<Config> {
+        let (res, _code) = self
+            .bucket
+            .list_page(
+                environment_id.to_string(),
+                None,
+                None,
+                None,
+                Option::from(1),
+            )
+            .await
+            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+
+        let environment = if let Some(environment_obj) = res.contents.first() {
+            if let Some(index) = environment_obj.key.find('/') {
+                let result = &environment_obj.key[0..index];
+                result.to_string()
+            } else {
+                environment_obj.key.to_string()
+            }
+        } else {
+            return Err(RepositoryError {
+                message: String::from("Environment not found"),
+            });
+        };
+
+        let (res, _code) = self
+            .bucket
+            .list_page(
+                format!("{}/{}.", environment, config_id),
+                None,
+                None,
+                None,
+                Option::from(1),
+            )
+            .await
+            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+
+        let config_name = if let Some(config_obj) = res.contents.first() {
+            let res = config_obj
+                .key
+                .replace(format!("{}/{}.", environment, config_id).as_str(), "");
+
+            String::from(res.strip_suffix(".json").unwrap())
+        } else {
+            return Err(RepositoryError {
+                message: String::from("Config not found"),
+            });
+        };
+
+        let config_data = self
+            .bucket
+            .get_object(format!(
+                "{}/{}.{}.json",
+                environment, config_id, config_name
+            ))
+            .await
+            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+
+        let (data, _code) = self
+            .bucket
+            .head_object(format!(
+                "{}/{}.{}.json",
+                environment, config_id, config_name
+            ))
+            .await
+            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+
+        let created_at = DateTime::parse_from_rfc2822(data.last_modified.unwrap().as_str())
+            .map_err(|err| S3RepositoryError::from(err).into_inner())?
+            .timestamp_millis();
+
         Ok(Config {
             id: config_id,
-            name: String::from(""),
-            config: String::from(""),
-            environment: 0,
-            created_at: 0,
+            name: config_name,
+            config: String::from_utf8(config_data.bytes().to_vec()).unwrap(),
+            environment: environment_id,
+            created_at,
         })
     }
 

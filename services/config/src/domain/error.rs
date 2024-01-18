@@ -5,6 +5,7 @@ use std::fmt;
 #[derive(Debug, Serialize)]
 pub struct CommonError {
     pub message: String,
+    pub description: String,
     pub code: u32,
 }
 
@@ -44,6 +45,7 @@ impl From<RepositoryError> for CommonError {
     fn from(error: RepositoryError) -> Self {
         CommonError {
             message: error.message,
+            description: String::from("value"),
             code: 1,
         }
     }

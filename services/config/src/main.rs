@@ -1,5 +1,7 @@
 use actix_web::{middleware::Logger, web, App, HttpServer};
-use config::api::controllers::config_handler::{create_config_handler, list_config_handler};
+use config::api::controllers::config_handler::{
+    create_config_handler, get_config_handler, list_config_handler,
+};
 use config::api::controllers::environment_handler::{
     create_environment_handler, list_environment_handler,
 };
@@ -31,6 +33,10 @@ async fn main() -> std::io::Result<()> {
                     .error_handler(|err, _req| HttpError::Json(err.to_string()).into()),
             )
             .app_data(
+                web::PathConfig::default()
+                    .error_handler(|err, _req| HttpError::Path(err.to_string()).into()),
+            )
+            .app_data(
                 web::QueryConfig::default()
                     .error_handler(|err, _req| HttpError::Query(err.to_string()).into()),
             )
@@ -46,6 +52,11 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/environment")
                     .route("", web::post().to(create_environment_handler))
                     .route("", web::get().to(list_environment_handler)),
+            )
+            .service(
+                web::scope("/environments").service(web::scope("/{environment_id}").service(
+                    web::scope("/configs").route("/{config_id}", web::get().to(get_config_handler)),
+                )),
             )
             .default_service(web::to(not_found))
     })

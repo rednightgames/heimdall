@@ -1,4 +1,5 @@
 use crate::api::dto::config::{ConfigDTO, CreateConfigDTO, ListConfigDTO};
+use crate::domain::models::id::ID;
 use crate::domain::repositories::config::ConfigQueryParams;
 use crate::domain::repositories::repository::ResultPaging;
 use crate::domain::{error::ApiError, services::config::ConfigService};
@@ -29,4 +30,15 @@ pub async fn list_config_handler(
         }
         Err(err) => Ok(HttpResponse::BadRequest().json(err)),
     }
+}
+
+pub async fn get_config_handler(
+    info: web::Path<(ID, ID)>,
+    config_service: web::Data<dyn ConfigService>,
+) -> Result<actix_web::HttpResponse, ApiError> {
+    let (environment_id, config_id) = info.into_inner();
+
+    let config = config_service.get(environment_id, config_id).await?;
+
+    Ok(HttpResponse::Ok().json(ConfigDTO::from(config)))
 }
