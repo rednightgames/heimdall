@@ -18,9 +18,9 @@ pub struct Container {
 impl Container {
     fn new() -> Self {
         let config_repository: Arc<dyn ConfigRepository> =
-            Arc::new(ConfigS3Repository::new(Arc::new(s3::connection())));
+            Arc::new(ConfigS3Repository::new(Arc::new(s3::connect())));
         let environment_repository: Arc<dyn EnvironmentRepository> =
-            Arc::new(EnvironmentS3Repository::new(Arc::new(s3::connection())));
+            Arc::new(EnvironmentS3Repository::new(Arc::new(s3::connect())));
         let identifier_generator = Generator::default();
 
         let config_service = Arc::new(ConfigServiceImpl {

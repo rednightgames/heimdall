@@ -13,8 +13,6 @@ pub struct ConfigQueryParams {
     pub next_page: Option<String>,
     #[validate(range(min = 5, max = 50))]
     pub page_size: Option<usize>,
-    #[validate(required)]
-    pub environment: Option<String>,
     pub query: Option<String>,
 }
 
@@ -33,7 +31,7 @@ impl QueryParams for ConfigQueryParams {
 #[async_trait]
 pub trait ConfigRepository: Send + Sync {
     async fn create(&self, id: ID, new_config: &CreateConfig) -> RepositoryResult<Config>;
-    async fn list(&self, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>>;
+    async fn list(&self, environment_id: ID, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>>;
     async fn get(&self, environment_id: ID, config_id: ID) -> RepositoryResult<Config>;
     async fn delete(&self, config_id: ID) -> RepositoryResult<()>;
 }

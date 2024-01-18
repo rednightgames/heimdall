@@ -21,11 +21,14 @@ pub async fn create_config_handler(
 
 pub async fn list_config_handler(
     config_service: web::Data<dyn ConfigService>,
+    info: web::Path<(ID,)>,
     params: web::Query<ConfigQueryParams>,
 ) -> Result<actix_web::HttpResponse, ApiError> {
+    let (environment_id,) = info.into_inner();
+
     match params.validate() {
         Ok(_) => {
-            let configs = config_service.list(params.into_inner()).await?;
+            let configs = config_service.list(environment_id, params.into_inner()).await?;
             Ok(HttpResponse::Ok().json(Into::<ResultPaging<ListConfigDTO>>::into(configs)))
         }
         Err(err) => Ok(HttpResponse::BadRequest().json(err)),

@@ -78,7 +78,7 @@ impl ConfigRepository for ConfigS3Repository {
         })
     }
 
-    async fn list(&self, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>> {
+    async fn list(&self, environment_id: ID, params: ConfigQueryParams) -> RepositoryResult<ResultPaging<Config>> {
         let mut configs: Vec<Config> = vec![];
         let mut curr_page = None;
 
@@ -92,39 +92,33 @@ impl ConfigRepository for ConfigS3Repository {
             )
         }
 
-        let mut environment = String::default();
+        let (res, _code) = self
+            .bucket
+            .list_page(
+                environment_id.to_string(),
+                None,
+                None,
+                None,
+                Option::from(1),
+            )
+            .await
+            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
-        if params.environment.is_some() {
-            let (res, _code) = self
-                .bucket
-                .list_page(
-                    params.clone().environment.unwrap(),
-                    None,
-                    None,
-                    None,
-                    Option::from(1),
-                )
-                .await
-                .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-            environment = if let Some(environment_obj) = res.contents.first() {
-                if let Some(index) = environment_obj.key.find('/') {
-                    let result = &environment_obj.key[0..index];
-                    result.to_string()
-                } else {
-                    environment_obj.key.to_string()
-                }
+        let environment = if let Some(environment_obj) = res.contents.first() {
+            if let Some(index) = environment_obj.key.find('/') {
+                let result = &environment_obj.key[0..index];
+                result.to_string()
             } else {
-                return Err(RepositoryError {
-                    message: String::from("Environment not found"),
-                });
-            };
-        }
+                environment_obj.key.to_string()
+            }
+        } else {
+            return Err(RepositoryError {
+                message: String::from("Environment not found"),
+            });
+        };
+        
 
-        let mut prefix = String::default();
-        if params.clone().environment.is_some() {
-            prefix.push_str(format!("{}/", environment).as_str());
-        }
+        let mut prefix = format!("{}/", environment);
         if params.query.is_some() {
             prefix.push_str(params.query.clone().unwrap().as_str());
         }
@@ -154,8 +148,8 @@ impl ConfigRepository for ConfigS3Repository {
                 .key
                 .strip_prefix(format!("{}/", environment).as_str())
                 .unwrap()
-                .strip_suffix(".json")
-                .unwrap();
+                .replace(".json", "")
+                .replace(".manifest", "");
 
             if filename == "environment" {
                 continue;
