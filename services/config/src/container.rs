@@ -2,9 +2,9 @@ use crate::domain::repositories::config::ConfigRepository;
 use crate::domain::repositories::environment::EnvironmentRepository;
 use crate::domain::services::config::ConfigService;
 use crate::domain::services::environment::EnvironmentService;
-use crate::infrastructure::databases::s3;
+use crate::infrastructure::databases::{s3, scylla};
 use crate::infrastructure::repositories::config::ConfigS3Repository;
-use crate::infrastructure::repositories::environment::EnvironmentS3Repository;
+use crate::infrastructure::repositories::environment::EnvironmentScyllaRepository;
 use crate::services::config::ConfigServiceImpl;
 use crate::services::environment::EnvironmentServiceImpl;
 use id::Generator;
@@ -16,11 +16,13 @@ pub struct Container {
 }
 
 impl Container {
-    fn new() -> Self {
+    pub async fn new() -> Self {
+        let scylla_con = scylla::connect().await;
+
         let config_repository: Arc<dyn ConfigRepository> =
             Arc::new(ConfigS3Repository::new(Arc::new(s3::connect())));
         let environment_repository: Arc<dyn EnvironmentRepository> =
-            Arc::new(EnvironmentS3Repository::new(Arc::new(s3::connect())));
+            Arc::new(EnvironmentScyllaRepository::new(Arc::new(scylla_con)).await);
         let identifier_generator = Generator::default();
 
         let config_service = Arc::new(ConfigServiceImpl {
@@ -37,11 +39,5 @@ impl Container {
             config_service,
             environment_service,
         }
-    }
-}
-
-impl Default for Container {
-    fn default() -> Self {
-        Container::new()
     }
 }

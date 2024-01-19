@@ -14,7 +14,7 @@ use tonic::transport::Server;
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-    let container = Container::default();
+    let container = Container::new().await;
     let config_service = container.config_service.clone();
     let environment_service = container.environment_service.clone();
 

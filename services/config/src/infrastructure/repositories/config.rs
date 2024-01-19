@@ -163,8 +163,8 @@ impl ConfigRepository for ConfigS3Repository {
             let id_str = filename_parts[0];
             let name = String::from(filename_parts[1]);
 
-            let id: u64 = String::from(id_str)
-                .parse::<u64>()
+            let id: i64 = String::from(id_str)
+                .parse::<i64>()
                 .map_err(|err| S3RepositoryError::from(err).into_inner())?;
 
             let created_at = obj

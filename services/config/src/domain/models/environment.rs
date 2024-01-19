@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Environment {
     pub id: ID,
     pub name: String,
+    pub created_at: i64,
 }
 
 #[derive(Clone, Deserialize, Serialize)]

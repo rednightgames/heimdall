@@ -14,6 +14,7 @@ lazy_static! {
 pub struct EnvironmentDTO {
     pub id: ID,
     pub name: String,
+    pub created_at: i64,
 }
 
 #[derive(Serialize, Deserialize, Validate)]
@@ -30,6 +31,7 @@ pub struct CreateEnvironmentDTO {
 pub struct ListEnvironmentDTO {
     pub id: ID,
     pub name: String,
+    pub created_at: i64,
 }
 
 impl From<Environment> for EnvironmentDTO {
@@ -37,6 +39,7 @@ impl From<Environment> for EnvironmentDTO {
         EnvironmentDTO {
             id: env.id,
             name: env.name,
+            created_at: env.created_at,
         }
     }
 }
@@ -46,6 +49,7 @@ impl From<Environment> for ListEnvironmentDTO {
         ListEnvironmentDTO {
             id: env.id,
             name: env.name,
+            created_at: env.created_at,
         }
     }
 }

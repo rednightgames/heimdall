@@ -7,7 +7,7 @@ use cdrs_tokio::transport::TransportTcp;
 use std::env;
 use std::sync::Arc;
 
-type Session = session::Session<
+pub type Session = session::Session<
     TransportTcp,
     TcpConnectionManager,
     RoundRobinLoadBalancingStrategy<TransportTcp, TcpConnectionManager>,

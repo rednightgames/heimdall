@@ -2,39 +2,56 @@ use crate::domain::models::environment::{CreateEnvironment, Environment};
 use crate::domain::models::id::ID;
 use crate::domain::repositories::environment::{EnvironmentQueryParams, EnvironmentRepository};
 use crate::domain::repositories::repository::{QueryParams, RepositoryResult, ResultPaging};
-use crate::infrastructure::databases::s3::Bucket;
-use crate::infrastructure::error::{DecodeError, S3RepositoryError};
+use crate::infrastructure::databases::scylla;
+use crate::infrastructure::error::{DecodeError, ScyllaRepositoryError};
+use crate::infrastructure::models::environment::ScyllaEnvironment;
+use crate::infrastructure::queries::{
+    CREATE_CONFIGS_KEYSPACE_QUERY, CREATE_ENVIRONMENTS_TABLE_QUERY, CREATE_ENVIRONMENT_QUERY,
+};
 use async_trait::async_trait;
+use cdrs_tokio::frame::TryFromRow;
+use cdrs_tokio::query_values;
+use chrono::Utc;
 use std::sync::Arc;
 
-pub struct EnvironmentS3Repository {
-    bucket: Arc<Bucket>,
+pub struct EnvironmentScyllaRepository {
+    repository: Arc<scylla::Session>,
 }
 
-impl EnvironmentS3Repository {
-    pub fn new(bucket: Arc<Bucket>) -> Self {
-        Self { bucket }
+impl EnvironmentScyllaRepository {
+    pub async fn new(repository: Arc<scylla::Session>) -> Self {
+        repository
+            .query(CREATE_CONFIGS_KEYSPACE_QUERY)
+            .await
+            .expect("ScyllaDB: initialisation failed");
+
+        repository
+            .query(CREATE_ENVIRONMENTS_TABLE_QUERY)
+            .await
+            .expect("ScyllaDB: initialisation failed");
+
+        EnvironmentScyllaRepository { repository }
     }
 }
 
 #[async_trait]
-impl EnvironmentRepository for EnvironmentS3Repository {
+impl EnvironmentRepository for EnvironmentScyllaRepository {
     async fn create(&self, id: ID, new_env: &CreateEnvironment) -> RepositoryResult<Environment> {
         let cloned = new_env.clone();
-        let env_file = format!(r#"{{"name": "{}"}}"#, cloned.name);
+        let created_at = Utc::now().timestamp_millis();
 
-        self.bucket
-            .put_object_with_content_type(
-                format!("{}.{}/environment.json", id, cloned.name),
-                env_file.as_bytes(),
-                "application/rednight.manifest",
+        self.repository
+            .query_with_values(
+                CREATE_ENVIRONMENT_QUERY,
+                query_values!(id, cloned.name.clone(), created_at),
             )
             .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?;
 
         Ok(Environment {
-            name: cloned.name,
             id,
+            name: cloned.name,
+            created_at,
         })
     }
 
@@ -43,53 +60,48 @@ impl EnvironmentRepository for EnvironmentS3Repository {
         params: EnvironmentQueryParams,
     ) -> RepositoryResult<ResultPaging<Environment>> {
         let mut envs: Vec<Environment> = vec![];
-        let mut curr_page = None;
+        let mut curr_page = Some(0);
 
-        if !params.next_page().is_empty() {
+        if params.next_page.is_some() {
             curr_page = Option::from(
                 String::from_utf8(
                     base64_url::decode(params.next_page().as_str())
                         .map_err(|err| DecodeError::from(err).into_inner())?,
                 )
+                .unwrap()
+                .parse::<i64>()
                 .unwrap(),
             )
         }
 
-        let (res, _) = self
-            .bucket
-            .list_page(
-                String::default(),
-                Option::from(String::from("/")),
-                curr_page,
-                None,
-                Option::from(params.page_size()),
+        println!("{:?}", curr_page);
+
+        let rows = self
+            .repository
+            .query_with_values(
+                r#"SELECT * FROM configs.environments WHERE token(id) > ? LIMIT ? ORDER BY id ASC ALLOW FILTERING;"#,
+                query_values!(curr_page, params.page_size() as i32),
             )
             .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+            .response_body()
+            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+            .into_rows()
+            .ok_or_else(|| ScyllaRepositoryError::from(String::from("err")).into_inner())?;
 
-        if let Some(obj) = res.common_prefixes {
-            for o in obj {
-                let name_parts: Vec<&str> =
-                    o.prefix.strip_suffix('/').unwrap().split('.').collect();
-
-                let id_str = name_parts[0];
-                let name = String::from(name_parts[1]);
-
-                let id: u64 = String::from(id_str)
-                    .parse::<u64>()
-                    .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-                envs.push(Environment { id, name })
-            }
-        }
-
-        let mut next_page = None;
-
-        if res.next_continuation_token.is_some() {
-            next_page = Option::from(base64_url::encode(
-                res.next_continuation_token.unwrap_or_default().as_str(),
+        for row in rows {
+            envs.push(Environment::from(
+                ScyllaEnvironment::try_from_row(row).expect("into ScyllaEnvironment"),
             ))
         }
+
+        let next_page = if let Some(last_env) = envs.last() {
+            Option::from(base64_url::encode(
+                last_env.id.to_string().as_str()
+            ))
+        } else {
+            None
+        };
 
         Ok(ResultPaging {
             code: 0,
