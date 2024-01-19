@@ -23,12 +23,12 @@ impl EnvironmentScyllaRepository {
         repository
             .query(CREATE_CONFIGS_KEYSPACE_QUERY)
             .await
-            .expect("ScyllaDB: initialisation failed");
+            .expect("ScyllaDB: initialisation failed: initialize keyspace");
 
         repository
             .query(CREATE_ENVIRONMENTS_TABLE_QUERY)
             .await
-            .expect("ScyllaDB: initialisation failed");
+            .expect("ScyllaDB: initialisation failed: initialize table");
 
         EnvironmentScyllaRepository { repository }
     }
@@ -74,12 +74,10 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
             )
         }
 
-        println!("{:?}", curr_page);
-
         let rows = self
             .repository
             .query_with_values(
-                r#"SELECT * FROM configs.environments WHERE token(id) > ? LIMIT ? ORDER BY id ASC ALLOW FILTERING;"#,
+                r#"SELECT * FROM configs.environments WHERE id > ? LIMIT ?;"#,
                 query_values!(curr_page, params.page_size() as i32),
             )
             .await
@@ -87,18 +85,21 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
             .response_body()
             .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
             .into_rows()
-            .ok_or_else(|| ScyllaRepositoryError::from(String::from("err")).into_inner())?;
+            .ok_or_else(|| ScyllaRepositoryError::from(String::from("Rows not found")).into_inner())?;
 
         for row in rows {
             envs.push(Environment::from(
-                ScyllaEnvironment::try_from_row(row).expect("into ScyllaEnvironment"),
+                ScyllaEnvironment::try_from_row(row)
+                    .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?,
             ))
         }
 
         let next_page = if let Some(last_env) = envs.last() {
-            Option::from(base64_url::encode(
-                last_env.id.to_string().as_str()
-            ))
+            if envs.len() == params.page_size() {
+                Some(base64_url::encode(last_env.id.to_string().as_str()))
+            } else {
+                None
+            }
         } else {
             None
         };

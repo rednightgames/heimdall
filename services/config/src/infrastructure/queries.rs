@@ -10,11 +10,11 @@ pub static CREATE_CONFIGS_KEYSPACE_QUERY: &str = r#"
 // Environments
 pub static CREATE_ENVIRONMENTS_TABLE_QUERY: &str = r#"
     create table if not exists configs.environments (
-        "id" bigint,
-        "name" text,
-        "created_at" timestamp,
-        primary key ("id", "name")
-    ) WITH CLUSTERING ORDER BY ("id" ASC);
+        id bigint,
+        name text,
+        created_at timestamp,
+        primary key (name, id)
+    );
 "#;
 
 pub static CREATE_ENVIRONMENT_QUERY: &str = r#"
