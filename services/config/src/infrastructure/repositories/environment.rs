@@ -77,7 +77,7 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
         let rows = self
             .repository
             .query_with_values(
-                r#"SELECT * FROM configs.environments WHERE id > ? LIMIT ?;"#,
+                r#"select * from configs.environments where id > ? limit ?;"#,
                 query_values!(curr_page, params.page_size() as i32),
             )
             .await
