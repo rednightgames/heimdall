@@ -23,12 +23,12 @@ impl EnvironmentScyllaRepository {
         repository
             .query(CREATE_CONFIGS_KEYSPACE_QUERY)
             .await
-            .expect("ScyllaDB: initialisation failed: initialize keyspace");
+            .expect("scylla: initialisation failed: initialize keyspace");
 
         repository
             .query(CREATE_ENVIRONMENTS_TABLE_QUERY)
             .await
-            .expect("ScyllaDB: initialisation failed: initialize table");
+            .expect("scylla: initialisation failed: initialize table");
 
         EnvironmentScyllaRepository { repository }
     }
@@ -85,7 +85,9 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
             .response_body()
             .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
             .into_rows()
-            .ok_or_else(|| ScyllaRepositoryError::from(String::from("Rows not found")).into_inner())?;
+            .ok_or_else(|| {
+                ScyllaRepositoryError::from(String::from("Rows not found")).into_inner()
+            })?;
 
         for row in rows {
             envs.push(Environment::from(

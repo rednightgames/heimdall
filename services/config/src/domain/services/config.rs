@@ -7,7 +7,7 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait ConfigService: Sync + Send {
-    async fn create(&self, config: CreateConfig) -> Result<Config, CommonError>;
+    async fn create(&self, environment_id: ID, config: CreateConfig) -> Result<Config, CommonError>;
     async fn list(
         &self,
         environment_id: ID,

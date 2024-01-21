@@ -15,7 +15,7 @@ pub struct ConfigDTO {
     pub id: ID,
     pub name: String,
     pub config: String,
-    pub environment: ID,
+    pub environment_id: ID,
     pub created_at: i64,
 }
 
@@ -30,7 +30,7 @@ pub struct CreateConfigDTO {
     #[validate(required, length(min = 1))]
     pub config: Option<String>,
     #[validate(required)]
-    pub environment: Option<ID>,
+    pub environment_id: Option<ID>,
 }
 
 #[derive(Debug, Serialize)]
@@ -45,7 +45,7 @@ impl From<CreateConfigDTO> for CreateConfig {
         CreateConfig {
             name: config.name.unwrap(),
             config: config.config.unwrap(),
-            environment: config.environment.unwrap(),
+            environment_id: config.environment_id.unwrap(),
         }
     }
 }
@@ -56,7 +56,7 @@ impl From<Config> for ConfigDTO {
             id: config.id,
             name: config.name,
             config: config.config,
-            environment: config.environment,
+            environment_id: config.environment_id,
             created_at: config.created_at,
         }
     }

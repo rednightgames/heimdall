@@ -1,79 +1,59 @@
-use crate::domain::error::RepositoryError;
-use crate::domain::models::config::CreateConfig;
-use crate::domain::models::{config::Config, id::ID};
+use crate::domain::models::config::{Config, CreateConfig};
+use crate::domain::models::id::ID;
 use crate::domain::repositories::config::{ConfigQueryParams, ConfigRepository};
 use crate::domain::repositories::repository::{QueryParams, RepositoryResult, ResultPaging};
-use crate::infrastructure::databases::s3::Bucket;
-use crate::infrastructure::error::DecodeError;
-use crate::infrastructure::error::S3RepositoryError;
+use crate::infrastructure::databases::scylla;
+use crate::infrastructure::error::ScyllaRepositoryError;
+use crate::infrastructure::models::config::ScyllaConfig;
+use crate::infrastructure::queries::{
+    CREATE_CONFIGS_KEYSPACE_QUERY, CREATE_CONFIGS_TABLE_QUERY, CREATE_CONFIG_QUERY,
+};
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use cdrs_tokio::frame::TryFromRow;
+use cdrs_tokio::query::query_params;
+use cdrs_tokio::query_values;
+use chrono::Utc;
 use std::sync::Arc;
 
-pub struct ConfigS3Repository {
-    bucket: Arc<Bucket>,
+pub struct ConfigScyllaRepository {
+    repository: Arc<scylla::Session>,
 }
 
-impl ConfigS3Repository {
-    pub fn new(bucket: Arc<Bucket>) -> Self {
-        Self { bucket }
+impl ConfigScyllaRepository {
+    pub async fn new(repository: Arc<scylla::Session>) -> Self {
+        repository
+            .query(CREATE_CONFIGS_KEYSPACE_QUERY)
+            .await
+            .expect("scylla: initialisation failed: initialize keyspace");
+
+        repository
+            .query(CREATE_CONFIGS_TABLE_QUERY)
+            .await
+            .expect("scylla: initialisation failed: initialize table");
+
+        ConfigScyllaRepository { repository }
     }
 }
 
 #[async_trait]
-impl ConfigRepository for ConfigS3Repository {
-    async fn create(&self, id: ID, new_config: &CreateConfig) -> RepositoryResult<Config> {
+impl ConfigRepository for ConfigScyllaRepository {
+    async fn create(&self, id: ID, environment_id: ID, new_config: &CreateConfig) -> RepositoryResult<Config> {
         let cloned = new_config.clone();
+        let created_at = Utc::now().timestamp_millis();
 
-        let (res, _code) = self
-            .bucket
-            .list_page(
-                format!("{}", cloned.environment),
-                None,
-                None,
-                None,
-                Option::from(1),
+        self.repository
+            .query_with_values(
+                CREATE_CONFIG_QUERY,
+                query_values!(id, cloned.name.clone(), environment_id, created_at),
             )
             .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-        let environment = if let Some(environment_obj) = res.contents.first() {
-            if let Some(index) = environment_obj.key.find('/') {
-                let result = &environment_obj.key[0..index];
-                result.to_string()
-            } else {
-                environment_obj.key.to_string()
-            }
-        } else {
-            return Err(RepositoryError {
-                message: String::from("Environment not found"),
-            });
-        };
-
-        self.bucket
-            .put_object_with_content_type(
-                format!("{}/{}.{}.json", environment, id, cloned.name),
-                cloned.config.as_bytes(),
-                "application/rednight.config",
-            )
-            .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-        let (data, _code) = self
-            .bucket
-            .head_object(format!("{}/{}.{}.json", environment, id, cloned.name))
-            .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-        let created_at = DateTime::parse_from_rfc2822(data.last_modified.unwrap().as_str())
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?
-            .timestamp_millis();
+            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?;
 
         Ok(Config {
             id,
             name: cloned.name,
-            config: cloned.config,
-            environment: cloned.environment,
+            config: String::default(),
+            environment_id,
             created_at,
         })
     }
@@ -84,103 +64,31 @@ impl ConfigRepository for ConfigS3Repository {
         params: ConfigQueryParams,
     ) -> RepositoryResult<ResultPaging<Config>> {
         let mut configs: Vec<Config> = vec![];
-        let mut curr_page = None;
+        let mut curr_page = Some(0);
 
-        if !params.next_page().is_empty() {
-            curr_page = Option::from(
-                String::from_utf8(
-                    base64_url::decode(params.next_page().as_str())
-                        .map_err(|err| DecodeError::from(err).into_inner())?,
-                )
-                .unwrap(),
-            )
-        }
-
-        let (res, _code) = self
-            .bucket
-            .list_page(
-                environment_id.to_string(),
-                None,
-                None,
-                None,
-                Option::from(1),
+        let rows = self
+            .repository
+            .query_with_values(
+                r#"select * from configs.configs where id > ? limit ?;"#,
+                query_values!(curr_page, params.page_size() as i32),
             )
             .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
+            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+            .response_body()
+            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+            .into_rows()
+            .ok_or_else(|| {
+                ScyllaRepositoryError::from(String::from("Rows not found")).into_inner()
+            })?;
 
-        let environment = if let Some(environment_obj) = res.contents.first() {
-            if let Some(index) = environment_obj.key.find('/') {
-                let result = &environment_obj.key[0..index];
-                result.to_string()
-            } else {
-                environment_obj.key.to_string()
-            }
-        } else {
-            return Err(RepositoryError {
-                message: String::from("Environment not found"),
-            });
-        };
-
-        let mut prefix = format!("{}/", environment);
-        if params.query.is_some() {
-            prefix.push_str(params.query.clone().unwrap().as_str());
-        }
-
-        let (res, _code) = self
-            .bucket
-            .list_page(
-                prefix.clone(),
-                Option::from(String::from("/")),
-                curr_page,
-                None,
-                Option::from(params.page_size()),
-            )
-            .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-        let mut next_page = None;
-
-        if res.next_continuation_token.is_some() {
-            next_page = Option::from(base64_url::encode(
-                res.next_continuation_token.unwrap_or_default().as_str(),
+        for row in rows {
+            configs.push(Config::from(
+                ScyllaConfig::try_from_row(row)
+                    .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?,
             ))
         }
 
-        for obj in res.contents {
-            let filename = obj
-                .key
-                .strip_prefix(format!("{}/", environment).as_str())
-                .unwrap()
-                .replace(".json", "")
-                .replace(".manifest", "");
-
-            if filename == "environment" {
-                continue;
-            }
-
-            let filename_parts: Vec<&str> = filename.split('.').collect();
-
-            let id_str = filename_parts[0];
-            let name = String::from(filename_parts[1]);
-
-            let id: i64 = String::from(id_str)
-                .parse::<i64>()
-                .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-            let created_at = obj
-                .last_modified
-                .parse::<DateTime<Utc>>()
-                .map_err(|err| S3RepositoryError::from(err).into_inner())?
-                .timestamp_millis();
-
-            configs.push(Config {
-                id,
-                name,
-                config: String::default(),
-                environment: 0,
-                created_at,
-            });
-        }
+        let mut next_page = None;
 
         Ok(ResultPaging {
             code: 0,
@@ -190,83 +98,12 @@ impl ConfigRepository for ConfigS3Repository {
     }
 
     async fn get(&self, environment_id: ID, config_id: ID) -> RepositoryResult<Config> {
-        let (res, _code) = self
-            .bucket
-            .list_page(
-                environment_id.to_string(),
-                None,
-                None,
-                None,
-                Option::from(1),
-            )
-            .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-        let environment = if let Some(environment_obj) = res.contents.first() {
-            if let Some(index) = environment_obj.key.find('/') {
-                let result = &environment_obj.key[0..index];
-                result.to_string()
-            } else {
-                environment_obj.key.to_string()
-            }
-        } else {
-            return Err(RepositoryError {
-                message: String::from("Environment not found"),
-            });
-        };
-
-        let (res, _code) = self
-            .bucket
-            .list_page(
-                format!("{}/{}.", environment, config_id),
-                None,
-                None,
-                None,
-                Option::from(1),
-            )
-            .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-        let config_name = if let Some(config_obj) = res.contents.first() {
-            let res = config_obj
-                .key
-                .replace(format!("{}/{}.", environment, config_id).as_str(), "");
-
-            String::from(res.strip_suffix(".json").unwrap())
-        } else {
-            return Err(RepositoryError {
-                message: String::from("Config not found"),
-            });
-        };
-
-        let config_data = self
-            .bucket
-            .get_object(format!(
-                "{}/{}.{}.json",
-                environment, config_id, config_name
-            ))
-            .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-        let (data, _code) = self
-            .bucket
-            .head_object(format!(
-                "{}/{}.{}.json",
-                environment, config_id, config_name
-            ))
-            .await
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?;
-
-        let created_at = DateTime::parse_from_rfc2822(data.last_modified.unwrap().as_str())
-            .map_err(|err| S3RepositoryError::from(err).into_inner())?
-            .timestamp_millis();
-
         Ok(Config {
-            id: config_id,
-            name: config_name,
-            config: String::from_utf8(config_data.bytes().to_vec()).unwrap(),
-            environment: environment_id,
-            created_at,
+            id: todo!(),
+            name: todo!(),
+            config: todo!(),
+            environment_id: todo!(),
+            created_at: todo!(),
         })
     }
 

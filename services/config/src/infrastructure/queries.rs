@@ -29,3 +29,29 @@ pub static CREATE_ENVIRONMENT_QUERY: &str = r#"
         ?
     );
 "#;
+
+// Configs
+pub static CREATE_CONFIGS_TABLE_QUERY: &str = r#"
+    create table if not exists configs.configs (
+        id bigint,
+        name text,
+        environment_id bigint,
+        created_at timestamp,
+        primary key (name, id, environment_id)
+    );
+"#;
+
+pub static CREATE_CONFIG_QUERY: &str = r#"
+    insert into configs.configs (
+        id,
+        name,
+        environment_id,
+        created_at
+    )
+    values (
+        ?,
+        ?,
+        ?,
+        ?
+    );
+"#;

@@ -8,11 +8,14 @@ use validator::Validate;
 
 pub async fn create_config_handler(
     config_service: web::Data<dyn ConfigService>,
+    info: web::Path<(ID,)>,
     json: web::Json<CreateConfigDTO>,
 ) -> Result<actix_web::HttpResponse, ApiError> {
+    let (environment_id,) = info.into_inner();
+
     match json.validate() {
         Ok(_) => {
-            let config = config_service.create(json.into_inner().into()).await?;
+            let config = config_service.create(environment_id, json.into_inner().into()).await?;
             Ok(HttpResponse::Ok().json(ConfigDTO::from(config)))
         }
         Err(err) => Ok(HttpResponse::BadRequest().json(err)),
