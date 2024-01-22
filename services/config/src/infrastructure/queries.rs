@@ -37,7 +37,7 @@ pub static CREATE_CONFIGS_TABLE_QUERY: &str = r#"
         name text,
         environment_id bigint,
         created_at timestamp,
-        primary key (name, id, environment_id)
+        primary key (environment_id, id)
     );
 "#;
 

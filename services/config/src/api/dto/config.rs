@@ -29,8 +29,6 @@ pub struct CreateConfigDTO {
     pub name: Option<String>,
     #[validate(required, length(min = 1))]
     pub config: Option<String>,
-    #[validate(required)]
-    pub environment_id: Option<ID>,
 }
 
 #[derive(Debug, Serialize)]
@@ -45,7 +43,6 @@ impl From<CreateConfigDTO> for CreateConfig {
         CreateConfig {
             name: config.name.unwrap(),
             config: config.config.unwrap(),
-            environment_id: config.environment_id.unwrap(),
         }
     }
 }

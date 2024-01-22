@@ -14,5 +14,4 @@ pub struct Config {
 pub struct CreateConfig {
     pub name: String,
     pub config: String,
-    pub environment_id: ID,
 }

@@ -28,7 +28,7 @@ impl ConfigRepository for ConfigS3Repository {
         let (res, _code) = self
             .bucket
             .list_page(
-                format!("{}", cloned.environment_id),
+                format!("{}", environment_id),
                 None,
                 None,
                 None,
@@ -73,7 +73,7 @@ impl ConfigRepository for ConfigS3Repository {
             id,
             name: cloned.name,
             config: cloned.config,
-            environment_id: cloned.environment_id,
+            environment_id: environment_id,
             created_at,
         })
     }

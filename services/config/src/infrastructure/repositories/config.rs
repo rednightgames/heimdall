@@ -3,14 +3,13 @@ use crate::domain::models::id::ID;
 use crate::domain::repositories::config::{ConfigQueryParams, ConfigRepository};
 use crate::domain::repositories::repository::{QueryParams, RepositoryResult, ResultPaging};
 use crate::infrastructure::databases::scylla;
-use crate::infrastructure::error::ScyllaRepositoryError;
+use crate::infrastructure::error::{ScyllaRepositoryError, DecodeError};
 use crate::infrastructure::models::config::ScyllaConfig;
 use crate::infrastructure::queries::{
     CREATE_CONFIGS_KEYSPACE_QUERY, CREATE_CONFIGS_TABLE_QUERY, CREATE_CONFIG_QUERY,
 };
 use async_trait::async_trait;
 use cdrs_tokio::frame::TryFromRow;
-use cdrs_tokio::query::query_params;
 use cdrs_tokio::query_values;
 use chrono::Utc;
 use std::sync::Arc;
@@ -66,11 +65,23 @@ impl ConfigRepository for ConfigScyllaRepository {
         let mut configs: Vec<Config> = vec![];
         let mut curr_page = Some(0);
 
+        if params.next_page.is_some() {
+            curr_page = Option::from(
+                String::from_utf8(
+                    base64_url::decode(params.next_page().as_str())
+                        .map_err(|err| DecodeError::from(err).into_inner())?,
+                )
+                .unwrap()
+                .parse::<i64>()
+                .unwrap(),
+            )
+        }
+
         let rows = self
             .repository
             .query_with_values(
-                r#"select * from configs.configs where id > ? limit ?;"#,
-                query_values!(curr_page, params.page_size() as i32),
+                r#"select * from configs.configs where id > ? and environment_id = ? limit ?;"#,
+                query_values!(curr_page, environment_id, params.page_size() as i32),
             )
             .await
             .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
@@ -88,7 +99,15 @@ impl ConfigRepository for ConfigScyllaRepository {
             ))
         }
 
-        let mut next_page = None;
+        let next_page = if let Some(last_config) = configs.last() {
+            if configs.len() == params.page_size() {
+                Some(base64_url::encode(last_config.id.to_string().as_str()))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
 
         Ok(ResultPaging {
             code: 0,
