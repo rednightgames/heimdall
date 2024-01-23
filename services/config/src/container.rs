@@ -25,7 +25,7 @@ impl Container {
 
         let config_repository: Arc<dyn ConfigRepository> =
             Arc::new(ConfigScyllaRepository::new(scylla_con.clone()).await);
-        
+
         let environment_repository: Arc<dyn EnvironmentRepository> =
             Arc::new(EnvironmentScyllaRepository::new(scylla_con).await);
         let identifier_generator = Generator::default();

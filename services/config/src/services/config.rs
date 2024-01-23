@@ -25,7 +25,11 @@ impl ConfigServiceImpl {
 
 #[async_trait]
 impl ConfigService for ConfigServiceImpl {
-    async fn create(&self, environment_id: ID, config: CreateConfig) -> Result<Config, CommonError> {
+    async fn create(
+        &self,
+        environment_id: ID,
+        config: CreateConfig,
+    ) -> Result<Config, CommonError> {
         let cloned = config.clone();
         let id = self.identifier.clone().generate();
 

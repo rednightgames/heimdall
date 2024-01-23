@@ -42,7 +42,7 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
 
         self.repository
             .query_with_values(
-                CREATE_ENVIRONMENT_QUERY,
+                r#"insert into configs.environments ("id", "name", "created_at") values (?, ?, ?);"#,
                 query_values!(id, cloned.name.clone(), created_at),
             )
             .await

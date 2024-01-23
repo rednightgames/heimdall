@@ -22,7 +22,12 @@ impl ConfigS3Repository {
 
 #[async_trait]
 impl ConfigRepository for ConfigS3Repository {
-    async fn create(&self, id: ID, environment_id: ID, new_config: &CreateConfig) -> RepositoryResult<Config> {
+    async fn create(
+        &self,
+        id: ID,
+        environment_id: ID,
+        new_config: &CreateConfig,
+    ) -> RepositoryResult<Config> {
         let cloned = new_config.clone();
 
         let (res, _code) = self

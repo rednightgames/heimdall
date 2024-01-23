@@ -15,7 +15,9 @@ pub async fn create_config_handler(
 
     match json.validate() {
         Ok(_) => {
-            let config = config_service.create(environment_id, json.into_inner().into()).await?;
+            let config = config_service
+                .create(environment_id, json.into_inner().into())
+                .await?;
             Ok(HttpResponse::Ok().json(ConfigDTO::from(config)))
         }
         Err(err) => Ok(HttpResponse::BadRequest().json(err)),

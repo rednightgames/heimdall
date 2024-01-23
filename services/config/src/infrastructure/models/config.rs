@@ -24,9 +24,7 @@ impl From<ScyllaConfig> for Config {
 }
 
 impl TryFromRow for ScyllaConfig {
-    fn try_from_row(
-        row: cdrs_tokio::types::rows::Row,
-    ) -> cdrs_tokio::error::Result<ScyllaConfig> {
+    fn try_from_row(row: cdrs_tokio::types::rows::Row) -> cdrs_tokio::error::Result<ScyllaConfig> {
         let id = match cdrs_tokio::types::IntoRustByName::<i64>::get_by_name(&row, "id") {
             Ok(Some(val)) => val,
             _ => {

@@ -3,8 +3,9 @@ use crate::domain::models::id::ID;
 use crate::domain::repositories::config::{ConfigQueryParams, ConfigRepository};
 use crate::domain::repositories::repository::{QueryParams, RepositoryResult, ResultPaging};
 use crate::infrastructure::databases::scylla;
-use crate::infrastructure::error::{ScyllaRepositoryError, DecodeError};
+use crate::infrastructure::error::{DecodeError, ScyllaRepositoryError};
 use crate::infrastructure::models::config::ScyllaConfig;
+use crate::infrastructure::models::count::ScyllaCount;
 use crate::infrastructure::queries::{
     CREATE_CONFIGS_KEYSPACE_QUERY, CREATE_CONFIGS_TABLE_QUERY, CREATE_CONFIG_QUERY,
 };
@@ -12,6 +13,7 @@ use async_trait::async_trait;
 use cdrs_tokio::frame::TryFromRow;
 use cdrs_tokio::query_values;
 use chrono::Utc;
+use log::info;
 use std::sync::Arc;
 
 pub struct ConfigScyllaRepository {
@@ -36,7 +38,12 @@ impl ConfigScyllaRepository {
 
 #[async_trait]
 impl ConfigRepository for ConfigScyllaRepository {
-    async fn create(&self, id: ID, environment_id: ID, new_config: &CreateConfig) -> RepositoryResult<Config> {
+    async fn create(
+        &self,
+        id: ID,
+        environment_id: ID,
+        new_config: &CreateConfig,
+    ) -> RepositoryResult<Config> {
         let cloned = new_config.clone();
         let created_at = Utc::now().timestamp_millis();
 
@@ -62,52 +69,94 @@ impl ConfigRepository for ConfigScyllaRepository {
         environment_id: ID,
         params: ConfigQueryParams,
     ) -> RepositoryResult<ResultPaging<Config>> {
-        let mut configs: Vec<Config> = vec![];
-        let mut curr_page = Some(0);
+        let mut curr_page = 0;
 
         if params.next_page.is_some() {
-            curr_page = Option::from(
-                String::from_utf8(
-                    base64_url::decode(params.next_page().as_str())
-                        .map_err(|err| DecodeError::from(err).into_inner())?,
+            curr_page = String::from_utf8(
+                base64_url::decode(params.next_page().as_str())
+                    .map_err(|err| DecodeError::from(err).into_inner())?,
+            )
+            .unwrap()
+            .parse::<i64>()
+            .unwrap()
+        }
+
+        async fn fetch_configs(
+            repository: Arc<scylla::Session>,
+            curr_page: ID,
+            environment_id: ID,
+            page_size: i32,
+        ) -> RepositoryResult<Vec<Config>> {
+            let mut configs: Vec<Config> = vec![];
+
+            let rows = repository
+                .query_with_values(
+                    r#"select * from configs.configs where id > ? and environment_id = ? limit ?;"#,
+                    query_values!(curr_page, environment_id, page_size),
                 )
-                .unwrap()
-                .parse::<i64>()
-                .unwrap(),
-            )
+                .await
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .response_body()
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .into_rows()
+                .ok_or_else(|| {
+                    ScyllaRepositoryError::from(String::from("Rows not found")).into_inner()
+                })?;
+
+            for row in rows {
+                configs
+                    .push(Config::from(ScyllaConfig::try_from_row(row).map_err(
+                        |err| ScyllaRepositoryError::from(err).into_inner(),
+                    )?))
+            }
+
+            Ok(configs)
         }
 
-        let rows = self
-            .repository
-            .query_with_values(
-                r#"select * from configs.configs where id > ? and environment_id = ? limit ?;"#,
-                query_values!(curr_page, environment_id, params.page_size() as i32),
-            )
-            .await
-            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
-            .response_body()
-            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
-            .into_rows()
-            .ok_or_else(|| {
-                ScyllaRepositoryError::from(String::from("Rows not found")).into_inner()
-            })?;
+        async fn fetch_count(
+            repository: Arc<scylla::Session>,
+            curr_page: ID,
+            environment_id: ID,
+        ) -> RepositoryResult<i64> {
+            let rows = repository
+                .query_with_values(
+                    r#"select count(*) from configs.configs where id > ? and environment_id = ?;"#,
+                    query_values!(curr_page, environment_id),
+                )
+                .await
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .response_body()
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .into_rows()
+                .ok_or_else(|| {
+                    ScyllaRepositoryError::from(String::from("Rows not found")).into_inner()
+                })?;
 
-        for row in rows {
-            configs.push(Config::from(
-                ScyllaConfig::try_from_row(row)
-                    .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?,
-            ))
+            rows.last().map_or(Ok(0), |r| {
+                Ok(ScyllaCount::try_from_row(r.clone())
+                    .map_err(|err| ScyllaRepositoryError::from(err).into_inner())
+                    .map(|count| count.into_inner())
+                    .unwrap_or(0))
+            })
         }
 
-        let next_page = if let Some(last_config) = configs.last() {
-            if configs.len() == params.page_size() {
+        let (configs, count) = tokio::try_join!(
+            fetch_configs(
+                self.repository.clone(),
+                curr_page,
+                environment_id,
+                params.page_size() as i32
+            ),
+            fetch_count(self.repository.clone(), curr_page, environment_id)
+        )?;
+
+        let next_page = configs.last().and_then(|last_config| {
+            if count > configs.len() as i64 {
                 Some(base64_url::encode(last_config.id.to_string().as_str()))
             } else {
                 None
             }
-        } else {
-            None
-        };
+        });
 
         Ok(ResultPaging {
             code: 0,
