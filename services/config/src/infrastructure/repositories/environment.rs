@@ -6,9 +6,6 @@ use crate::infrastructure::databases::scylla;
 use crate::infrastructure::error::{DecodeError, ScyllaRepositoryError};
 use crate::infrastructure::models::count::ScyllaCount;
 use crate::infrastructure::models::environment::ScyllaEnvironment;
-use crate::infrastructure::queries::{
-    CREATE_CONFIGS_KEYSPACE_QUERY, CREATE_ENVIRONMENTS_TABLE_QUERY, CREATE_ENVIRONMENT_QUERY,
-};
 use async_trait::async_trait;
 use cdrs_tokio::frame::TryFromRow;
 use cdrs_tokio::query_values;
@@ -22,12 +19,12 @@ pub struct EnvironmentScyllaRepository {
 impl EnvironmentScyllaRepository {
     pub async fn new(repository: Arc<scylla::Session>) -> Self {
         repository
-            .query(CREATE_CONFIGS_KEYSPACE_QUERY)
+            .query(r#"create keyspace if not exists configs with replication = {'class': 'SimpleStrategy', 'replication_factor': 1};"#)
             .await
             .expect("scylla: initialisation failed: initialize keyspace");
 
         repository
-            .query(CREATE_ENVIRONMENTS_TABLE_QUERY)
+            .query(r#"create table if not exists configs.environments (id bigint, name text, created_at timestamp, primary key (name, id));"#)
             .await
             .expect("scylla: initialisation failed: initialize table");
 
@@ -60,19 +57,16 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
         &self,
         params: EnvironmentQueryParams,
     ) -> RepositoryResult<ResultPaging<Environment>> {
-        let mut envs: Vec<Environment> = vec![];
         let mut curr_page = 0;
 
         if params.next_page.is_some() {
-            curr_page = 
-                String::from_utf8(
-                    base64_url::decode(params.next_page().as_str())
-                        .map_err(|err| DecodeError::from(err).into_inner())?,
-                )
-                .unwrap()
-                .parse::<i64>()
-                .unwrap()
-            
+            curr_page = String::from_utf8(
+                base64_url::decode(params.next_page().as_str())
+                    .map_err(|err| DecodeError::from(err).into_inner())?,
+            )
+            .unwrap()
+            .parse::<i64>()
+            .unwrap()
         }
 
         async fn fetch_envs(
@@ -97,10 +91,10 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
                 })?;
 
             for row in rows {
-                envs
-                    .push(Environment::from(ScyllaEnvironment::try_from_row(row).map_err(
-                        |err| ScyllaRepositoryError::from(err).into_inner(),
-                    )?))
+                envs.push(Environment::from(
+                    ScyllaEnvironment::try_from_row(row)
+                        .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?,
+                ))
             }
 
             Ok(envs)

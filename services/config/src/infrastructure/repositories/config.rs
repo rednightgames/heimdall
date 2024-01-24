@@ -6,14 +6,10 @@ use crate::infrastructure::databases::scylla;
 use crate::infrastructure::error::{DecodeError, ScyllaRepositoryError};
 use crate::infrastructure::models::config::ScyllaConfig;
 use crate::infrastructure::models::count::ScyllaCount;
-use crate::infrastructure::queries::{
-    CREATE_CONFIGS_KEYSPACE_QUERY, CREATE_CONFIGS_TABLE_QUERY, CREATE_CONFIG_QUERY,
-};
 use async_trait::async_trait;
 use cdrs_tokio::frame::TryFromRow;
 use cdrs_tokio::query_values;
 use chrono::Utc;
-use log::info;
 use std::sync::Arc;
 
 pub struct ConfigScyllaRepository {
@@ -23,12 +19,12 @@ pub struct ConfigScyllaRepository {
 impl ConfigScyllaRepository {
     pub async fn new(repository: Arc<scylla::Session>) -> Self {
         repository
-            .query(CREATE_CONFIGS_KEYSPACE_QUERY)
+            .query(r#"create keyspace if not exists configs with replication = {'class': 'SimpleStrategy', 'replication_factor': 1};"#)
             .await
             .expect("scylla: initialisation failed: initialize keyspace");
 
         repository
-            .query(CREATE_CONFIGS_TABLE_QUERY)
+            .query(r#"create table if not exists configs.configs (id bigint, name text, environment_id bigint, created_at timestamp, primary key (environment_id, id));"#)
             .await
             .expect("scylla: initialisation failed: initialize table");
 
@@ -49,7 +45,7 @@ impl ConfigRepository for ConfigScyllaRepository {
 
         self.repository
             .query_with_values(
-                CREATE_CONFIG_QUERY,
+                r#"insert into configs.configs (id, name, environment_id, created_at) values (?, ?, ?, ?);"#,
                 query_values!(id, cloned.name.clone(), environment_id, created_at),
             )
             .await
