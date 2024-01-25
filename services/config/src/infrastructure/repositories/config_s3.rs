@@ -78,7 +78,7 @@ impl ConfigRepository for ConfigS3Repository {
             id,
             name: cloned.name,
             config: cloned.config,
-            environment_id: environment_id,
+            environment_id,
             created_at,
         })
     }
