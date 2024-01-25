@@ -43,6 +43,30 @@ impl ConfigRepository for ConfigScyllaRepository {
         let cloned = new_config.clone();
         let created_at = Utc::now().timestamp_millis();
 
+        let rows = self
+            .repository
+            .query_with_values(
+                r#"select count(*) from configs.environments where id = ?"#,
+                query_values!(environment_id),
+            )
+            .await
+            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+            .response_body()
+            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+            .into_rows()
+            .ok_or_else(|| {
+                ScyllaRepositoryError::from("Rows not found".to_string()).into_inner()
+            })?;
+
+        match rows.last().and_then(|r| ScyllaCount::try_from_row(r.clone()).ok()) {
+            Some(count) if count.clone().into_inner() == 1 => {},
+            _ => {
+                return Err(
+                    ScyllaRepositoryError::from("Environment not found".to_string()).into_inner(),
+                );
+            }
+        }
+
         self.repository
             .query_with_values(
                 r#"insert into configs.configs (id, name, environment_id, created_at) values (?, ?, ?, ?);"#,
@@ -96,7 +120,7 @@ impl ConfigRepository for ConfigScyllaRepository {
                 .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
                 .into_rows()
                 .ok_or_else(|| {
-                    ScyllaRepositoryError::from(String::from("Rows not found")).into_inner()
+                    ScyllaRepositoryError::from("Rows not found".to_string()).into_inner()
                 })?;
 
             for row in rows {
@@ -125,7 +149,7 @@ impl ConfigRepository for ConfigScyllaRepository {
                 .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
                 .into_rows()
                 .ok_or_else(|| {
-                    ScyllaRepositoryError::from(String::from("Rows not found")).into_inner()
+                    ScyllaRepositoryError::from("Rows not found".to_string()).into_inner()
                 })?;
 
             rows.last().map_or(Ok(0), |r| {
