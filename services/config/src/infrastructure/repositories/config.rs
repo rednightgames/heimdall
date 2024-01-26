@@ -58,8 +58,11 @@ impl ConfigRepository for ConfigScyllaRepository {
                 ScyllaRepositoryError::from("Rows not found".to_string()).into_inner()
             })?;
 
-        match rows.last().and_then(|r| ScyllaCount::try_from_row(r.clone()).ok()) {
-            Some(count) if count.clone().into_inner() == 1 => {},
+        match rows
+            .last()
+            .and_then(|r| ScyllaCount::try_from_row(r.clone()).ok())
+        {
+            Some(count) if count.clone().into_inner() == 1 => {}
             _ => {
                 return Err(
                     ScyllaRepositoryError::from("Environment not found".to_string()).into_inner(),
