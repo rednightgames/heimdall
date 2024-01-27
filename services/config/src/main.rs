@@ -21,7 +21,7 @@ async fn main() -> std::io::Result<()> {
     tokio::spawn(async move {
         Server::builder()
             .add_service(ConfigServer::new(ConfigService::default()))
-            .serve("0.0.0.0:6667".parse().unwrap())
+            .serve("0.0.0.0:666".parse().unwrap())
             .await
             .unwrap();
     });
