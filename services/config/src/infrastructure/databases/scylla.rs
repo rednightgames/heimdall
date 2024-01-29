@@ -6,6 +6,7 @@ use cdrs_tokio::load_balancing::RoundRobinLoadBalancingStrategy;
 use cdrs_tokio::transport::TransportTcp;
 use log::error;
 use std::env;
+use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
@@ -29,13 +30,19 @@ pub async fn connect() -> Session {
         .await
         .unwrap();
 
-    timeout(
-        timeout_duration,
-        TcpSessionBuilder::new(RoundRobinLoadBalancingStrategy::new(), cluster_config).build(),
-    )
-    .await
-    .map_err(|err| error!("{}", err))
-    .unwrap()
-    .map_err(|err| error!("{}", err))
-    .unwrap()
+    let session = match timeout(timeout_duration, TcpSessionBuilder::new(RoundRobinLoadBalancingStrategy::new(), cluster_config).build()).await {
+        Ok(session) => session,
+        Err(_err) => {
+            error!("Error connecting to Scylla: Connection timeout");
+            exit(0x1);
+        }
+    };
+
+    match session {
+        Ok(session) => session,
+        Err(err) => {
+            error!("Error connecting to Scylla: {}", err);
+            exit(0x1);
+        }
+    }
 }

@@ -6,7 +6,7 @@ use crate::domain::repositories::repository::ResultPaging;
 use async_trait::async_trait;
 
 #[async_trait]
-pub trait ConfigSerwdevice: Sync + Send {
+pub trait ConfigService: Sync + Send {
     async fn create(&self, environment_id: ID, config: CreateConfig)
         -> Result<Config, CommonError>;
     async fn list(
