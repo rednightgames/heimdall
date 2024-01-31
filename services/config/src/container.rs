@@ -3,7 +3,7 @@ use crate::domain::repositories::environment::EnvironmentRepository;
 use crate::domain::services::config::ConfigService;
 use crate::domain::services::environment::EnvironmentService;
 use crate::infrastructure::databases::scylla;
-use crate::infrastructure::repositories::config::ConfigScyllaRepository;
+use crate::infrastructure::repositories::config_scylla::ConfigScyllaRepository;
 use crate::infrastructure::repositories::environment::EnvironmentScyllaRepository;
 use crate::services::config::ConfigServiceImpl;
 use crate::services::environment::EnvironmentServiceImpl;
