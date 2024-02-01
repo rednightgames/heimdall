@@ -70,7 +70,7 @@ impl ConfigService for ConfigServiceImpl {
                 Err(CommonError {
                     message: "Cannot create new config".to_string(),
                     description: "Database error".to_string(),
-                    code: 1,
+                    code: 102,
                 })
             }
         }

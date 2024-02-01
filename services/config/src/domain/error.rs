@@ -1,3 +1,4 @@
+use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
 use serde::Serialize;
 use std::fmt;
@@ -32,7 +33,14 @@ impl fmt::Display for ApiError {
 
 impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse {
-        HttpResponse::BadRequest().json(&self.0)
+        HttpResponse::build(self.status_code()).json(&self.0)
+    }
+
+    fn status_code(&self) -> StatusCode {
+        match &self.0.code {
+            102 => StatusCode::INTERNAL_SERVER_ERROR,
+            _ => StatusCode::BAD_REQUEST,
+        }
     }
 }
 
@@ -45,7 +53,7 @@ impl From<RepositoryError> for CommonError {
     fn from(error: RepositoryError) -> Self {
         CommonError {
             message: error.message,
-            description: String::from("value"),
+            description: String::from("Repository error"),
             code: 1,
         }
     }
@@ -66,7 +74,7 @@ impl From<StorageError> for CommonError {
     fn from(error: StorageError) -> Self {
         CommonError {
             message: error.message,
-            description: String::from("value"),
+            description: String::from("Storage error"),
             code: 1,
         }
     }
