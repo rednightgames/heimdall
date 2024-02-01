@@ -102,10 +102,16 @@ impl ConfigService for ConfigServiceImpl {
         })
     }
 
-    async fn delete(&self, config_id: ID) -> Result<(), CommonError> {
-        self.repository
-            .delete(config_id)
-            .await
-            .map_err(CommonError::from)
+    async fn delete(&self, environment_id: ID, config_id: ID) -> Result<(), CommonError> {
+        tokio::try_join!(
+            self.storage
+                .delete(environment_id, config_id)
+                .map_err(CommonError::from),
+            self.repository
+                .delete(config_id)
+                .map_err(CommonError::from),
+        )?;
+
+        Ok(())
     }
 }

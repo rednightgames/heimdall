@@ -15,5 +15,5 @@ pub trait ConfigService: Sync + Send {
         params: ConfigQueryParams,
     ) -> Result<ResultPaging<Config>, CommonError>;
     async fn get(&self, environment_id: ID, config_id: ID) -> Result<Config, CommonError>;
-    async fn delete(&self, config_id: ID) -> Result<(), CommonError>;
+    async fn delete(&self, environment_id: ID, config_id: ID) -> Result<(), CommonError>;
 }
