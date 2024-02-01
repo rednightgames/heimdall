@@ -25,7 +25,7 @@ impl ConfigStorage for ConfigS3Storage {
                 "application/rednight.config",
             )
             .await
-            .map_err(|err| S3StorageError::from(err).into_inner())?;
+            .map_err(|_err| S3StorageError::new("Cannot create config", "Storage error", 102).into_inner())?;
 
         Ok(())
     }

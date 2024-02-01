@@ -39,6 +39,7 @@ impl ResponseError for ApiError {
     fn status_code(&self) -> StatusCode {
         match &self.0.code {
             102 => StatusCode::INTERNAL_SERVER_ERROR,
+            104 => StatusCode::NOT_FOUND,
             _ => StatusCode::BAD_REQUEST,
         }
     }
@@ -47,14 +48,16 @@ impl ResponseError for ApiError {
 #[derive(Debug)]
 pub struct RepositoryError {
     pub message: String,
+    pub description: String,
+    pub code: u32,
 }
 
 impl From<RepositoryError> for CommonError {
     fn from(error: RepositoryError) -> Self {
         CommonError {
             message: error.message,
-            description: String::from("Repository error"),
-            code: 1,
+            description: error.description,
+            code: error.code,
         }
     }
 }
@@ -68,14 +71,16 @@ impl fmt::Display for RepositoryError {
 #[derive(Debug)]
 pub struct StorageError {
     pub message: String,
+    pub description: String,
+    pub code: u32,
 }
 
 impl From<StorageError> for CommonError {
     fn from(error: StorageError) -> Self {
         CommonError {
             message: error.message,
-            description: String::from("Storage error"),
-            code: 1,
+            description: error.description,
+            code: error.code,
         }
     }
 }

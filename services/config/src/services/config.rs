@@ -58,7 +58,7 @@ impl ConfigService for ConfigServiceImpl {
                 environment_id,
                 created_at: repository_result.created_at,
             }),
-            Err(_error) => {
+            Err(error) => {
                 let storage = self.storage.clone();
                 let repository = self.repository.clone();
 
@@ -67,11 +67,7 @@ impl ConfigService for ConfigServiceImpl {
                     drop(repository.delete(id));
                 });
 
-                Err(CommonError {
-                    message: "Cannot create new config".to_string(),
-                    description: "Database error".to_string(),
-                    code: 102,
-                })
+                Err(error)
             }
         }
     }

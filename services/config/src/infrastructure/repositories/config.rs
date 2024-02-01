@@ -54,7 +54,7 @@ impl ConfigRepository for ConfigScyllaRepository {
             .response_body()
             .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
             .into_rows()
-            .ok_or_else(|| ScyllaRepositoryError::from("Rows not found").into_inner())?;
+            .ok_or_else(|| ScyllaRepositoryError::new("Cannot create config", "Environment not exists", 104).into_inner())?;
 
         match rows
             .last()
@@ -62,7 +62,7 @@ impl ConfigRepository for ConfigScyllaRepository {
         {
             Some(count) if count.clone().into_inner() == 1 => {}
             _ => {
-                return Err(ScyllaRepositoryError::from("Environment not found").into_inner());
+                return Err(ScyllaRepositoryError::new("Cannot create config", "Environment not exists", 104).into_inner());
             }
         }
 
@@ -192,10 +192,14 @@ impl ConfigRepository for ConfigScyllaRepository {
             .response_body()
             .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
             .into_rows()
-            .ok_or_else(|| ScyllaRepositoryError::from("No rows found").into_inner())?
+            .ok_or_else(|| {
+                ScyllaRepositoryError::new("No rows found", "Config not exists", 104).into_inner()
+            })?
             .into_iter()
             .last()
-            .ok_or_else(|| ScyllaRepositoryError::from("No rows found").into_inner())?;
+            .ok_or_else(|| {
+                ScyllaRepositoryError::new("No rows found", "Config not exists", 104).into_inner()
+            })?;
 
         Ok(Config::from(ScyllaConfig::try_from_row(rows).map_err(
             |err| ScyllaRepositoryError::from(err).into_inner(),
