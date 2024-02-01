@@ -10,7 +10,9 @@ impl ScyllaRepositoryError {
 
 impl From<&str> for ScyllaRepositoryError {
     fn from(error: &str) -> Self {
-        ScyllaRepositoryError(RepositoryError { message: error.to_string() })
+        ScyllaRepositoryError(RepositoryError {
+            message: error.to_string(),
+        })
     }
 }
 
@@ -33,7 +35,9 @@ impl S3StorageError {
 
 impl From<&str> for S3StorageError {
     fn from(error: &str) -> Self {
-        S3StorageError(StorageError { message: error.to_string() })
+        S3StorageError(StorageError {
+            message: error.to_string(),
+        })
     }
 }
 

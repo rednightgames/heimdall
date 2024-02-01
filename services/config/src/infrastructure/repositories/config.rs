@@ -54,9 +54,7 @@ impl ConfigRepository for ConfigScyllaRepository {
             .response_body()
             .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
             .into_rows()
-            .ok_or_else(|| {
-                ScyllaRepositoryError::from("Rows not found").into_inner()
-            })?;
+            .ok_or_else(|| ScyllaRepositoryError::from("Rows not found").into_inner())?;
 
         match rows
             .last()
@@ -64,9 +62,7 @@ impl ConfigRepository for ConfigScyllaRepository {
         {
             Some(count) if count.clone().into_inner() == 1 => {}
             _ => {
-                return Err(
-                    ScyllaRepositoryError::from("Environment not found").into_inner(),
-                );
+                return Err(ScyllaRepositoryError::from("Environment not found").into_inner());
             }
         }
 
@@ -122,9 +118,7 @@ impl ConfigRepository for ConfigScyllaRepository {
                 .response_body()
                 .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
                 .into_rows()
-                .ok_or_else(|| {
-                    ScyllaRepositoryError::from("Rows not found").into_inner()
-                })?;
+                .ok_or_else(|| ScyllaRepositoryError::from("Rows not found").into_inner())?;
 
             for row in rows {
                 configs
@@ -151,9 +145,7 @@ impl ConfigRepository for ConfigScyllaRepository {
                 .response_body()
                 .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
                 .into_rows()
-                .ok_or_else(|| {
-                    ScyllaRepositoryError::from("Rows not found").into_inner()
-                })?;
+                .ok_or_else(|| ScyllaRepositoryError::from("Rows not found").into_inner())?;
 
             rows.last().map_or(Ok(0), |r| {
                 Ok(ScyllaCount::try_from_row(r.clone())
@@ -205,10 +197,9 @@ impl ConfigRepository for ConfigScyllaRepository {
             .last()
             .ok_or_else(|| ScyllaRepositoryError::from("No rows found").into_inner())?;
 
-        Ok(Config::from(
-            ScyllaConfig::try_from_row(rows)
-                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?,
-        ))
+        Ok(Config::from(ScyllaConfig::try_from_row(rows).map_err(
+            |err| ScyllaRepositoryError::from(err).into_inner(),
+        )?))
     }
 
     async fn delete(&self, config_id: ID) -> RepositoryResult<()> {
