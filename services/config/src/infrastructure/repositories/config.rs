@@ -54,7 +54,10 @@ impl ConfigRepository for ConfigScyllaRepository {
             .response_body()
             .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
             .into_rows()
-            .ok_or_else(|| ScyllaRepositoryError::new("Cannot create config", "Environment not exists", 104).into_inner())?;
+            .ok_or_else(|| {
+                ScyllaRepositoryError::new("Cannot create config", "Environment not exists", 104)
+                    .into_inner()
+            })?;
 
         match rows
             .last()
@@ -62,7 +65,12 @@ impl ConfigRepository for ConfigScyllaRepository {
         {
             Some(count) if count.clone().into_inner() == 1 => {}
             _ => {
-                return Err(ScyllaRepositoryError::new("Cannot create config", "Environment not exists", 104).into_inner());
+                return Err(ScyllaRepositoryError::new(
+                    "Cannot create config",
+                    "Environment not exists",
+                    104,
+                )
+                .into_inner());
             }
         }
 
