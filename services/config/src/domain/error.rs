@@ -56,3 +56,24 @@ impl fmt::Display for RepositoryError {
         write!(f, "{}", self.message)
     }
 }
+
+#[derive(Debug)]
+pub struct StorageError {
+    pub message: String,
+}
+
+impl From<StorageError> for CommonError {
+    fn from(error: StorageError) -> Self {
+        CommonError {
+            message: error.message,
+            description: String::from("value"),
+            code: 1,
+        }
+    }
+}
+
+impl fmt::Display for StorageError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}

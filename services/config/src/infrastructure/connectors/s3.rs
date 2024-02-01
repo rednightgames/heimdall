@@ -4,7 +4,7 @@ pub type Bucket = s3::Bucket;
 pub type Region = s3::Region;
 pub type Credentials = s3::creds::Credentials;
 
-pub fn connect() -> Bucket {
+pub async fn connect() -> Bucket {
     let bucket_name = env::var("S3_BUCKET_NAME")
         .map_err(|_| "S3_BUCKET_NAME must be set")
         .unwrap();

@@ -30,7 +30,12 @@ pub async fn connect() -> Session {
         .await
         .unwrap();
 
-    let session = match timeout(timeout_duration, TcpSessionBuilder::new(RoundRobinLoadBalancingStrategy::new(), cluster_config).build()).await {
+    let session = match timeout(
+        timeout_duration,
+        TcpSessionBuilder::new(RoundRobinLoadBalancingStrategy::new(), cluster_config).build(),
+    )
+    .await
+    {
         Ok(session) => session,
         Err(_err) => {
             error!("Error connecting to Scylla: Connection timeout");

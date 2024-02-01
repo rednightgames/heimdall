@@ -1,4 +1,4 @@
-use crate::domain::error::RepositoryError;
+use crate::domain::error::{RepositoryError, StorageError};
 
 pub struct ScyllaRepositoryError(RepositoryError);
 
@@ -8,9 +8,9 @@ impl ScyllaRepositoryError {
     }
 }
 
-impl From<String> for ScyllaRepositoryError {
-    fn from(error: String) -> Self {
-        ScyllaRepositoryError(RepositoryError { message: error })
+impl From<&str> for ScyllaRepositoryError {
+    fn from(error: &str) -> Self {
+        ScyllaRepositoryError(RepositoryError { message: error.to_string() })
     }
 }
 
@@ -23,39 +23,31 @@ impl From<cdrs_tokio::error::Error> for ScyllaRepositoryError {
 }
 
 #[derive(Debug)]
-pub struct S3RepositoryError(RepositoryError);
+pub struct S3StorageError(StorageError);
 
-impl S3RepositoryError {
-    pub fn into_inner(self) -> RepositoryError {
+impl S3StorageError {
+    pub fn into_inner(self) -> StorageError {
         self.0
     }
 }
 
-impl From<String> for S3RepositoryError {
-    fn from(error: String) -> Self {
-        S3RepositoryError(RepositoryError { message: error })
+impl From<&str> for S3StorageError {
+    fn from(error: &str) -> Self {
+        S3StorageError(StorageError { message: error.to_string() })
     }
 }
 
-impl From<s3::error::S3Error> for S3RepositoryError {
+impl From<s3::error::S3Error> for S3StorageError {
     fn from(error: s3::error::S3Error) -> Self {
-        S3RepositoryError(RepositoryError {
+        S3StorageError(StorageError {
             message: error.to_string(),
         })
     }
 }
 
-impl From<std::num::ParseIntError> for S3RepositoryError {
+impl From<std::num::ParseIntError> for S3StorageError {
     fn from(error: std::num::ParseIntError) -> Self {
-        S3RepositoryError(RepositoryError {
-            message: error.to_string(),
-        })
-    }
-}
-
-impl From<chrono::ParseError> for S3RepositoryError {
-    fn from(error: chrono::ParseError) -> Self {
-        S3RepositoryError(RepositoryError {
+        S3StorageError(StorageError {
             message: error.to_string(),
         })
     }

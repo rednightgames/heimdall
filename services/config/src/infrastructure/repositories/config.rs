@@ -2,7 +2,7 @@ use crate::domain::models::config::{Config, CreateConfig};
 use crate::domain::models::id::ID;
 use crate::domain::repositories::config::{ConfigQueryParams, ConfigRepository};
 use crate::domain::repositories::repository::{QueryParams, RepositoryResult, ResultPaging};
-use crate::infrastructure::databases::scylla;
+use crate::infrastructure::connectors::scylla;
 use crate::infrastructure::error::{DecodeError, ScyllaRepositoryError};
 use crate::infrastructure::models::config::ScyllaConfig;
 use crate::infrastructure::models::count::ScyllaCount;
@@ -55,7 +55,7 @@ impl ConfigRepository for ConfigScyllaRepository {
             .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
             .into_rows()
             .ok_or_else(|| {
-                ScyllaRepositoryError::from("Rows not found".to_string()).into_inner()
+                ScyllaRepositoryError::from("Rows not found").into_inner()
             })?;
 
         match rows
@@ -65,7 +65,7 @@ impl ConfigRepository for ConfigScyllaRepository {
             Some(count) if count.clone().into_inner() == 1 => {}
             _ => {
                 return Err(
-                    ScyllaRepositoryError::from("Environment not found".to_string()).into_inner(),
+                    ScyllaRepositoryError::from("Environment not found").into_inner(),
                 );
             }
         }
@@ -123,7 +123,7 @@ impl ConfigRepository for ConfigScyllaRepository {
                 .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
                 .into_rows()
                 .ok_or_else(|| {
-                    ScyllaRepositoryError::from("Rows not found".to_string()).into_inner()
+                    ScyllaRepositoryError::from("Rows not found").into_inner()
                 })?;
 
             for row in rows {
@@ -152,7 +152,7 @@ impl ConfigRepository for ConfigScyllaRepository {
                 .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
                 .into_rows()
                 .ok_or_else(|| {
-                    ScyllaRepositoryError::from("Rows not found".to_string()).into_inner()
+                    ScyllaRepositoryError::from("Rows not found").into_inner()
                 })?;
 
             rows.last().map_or(Ok(0), |r| {
@@ -189,13 +189,26 @@ impl ConfigRepository for ConfigScyllaRepository {
     }
 
     async fn get(&self, environment_id: ID, config_id: ID) -> RepositoryResult<Config> {
-        Ok(Config {
-            id: todo!(),
-            name: todo!(),
-            config: todo!(),
-            environment_id: todo!(),
-            created_at: todo!(),
-        })
+        let rows = self
+            .repository
+            .query_with_values(
+                r#"select * from configs.configs where id = ? and environment_id = ?;"#,
+                query_values!(config_id, environment_id),
+            )
+            .await
+            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+            .response_body()
+            .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+            .into_rows()
+            .ok_or_else(|| ScyllaRepositoryError::from("No rows found").into_inner())?
+            .into_iter()
+            .last()
+            .ok_or_else(|| ScyllaRepositoryError::from("No rows found").into_inner())?;
+
+        Ok(Config::from(
+            ScyllaConfig::try_from_row(rows)
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?,
+        ))
     }
 
     async fn delete(&self, config_id: ID) -> RepositoryResult<()> {
