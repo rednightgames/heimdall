@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package config;
+
+service Config {
+    rpc create(CreateRequest) returns (CreateResponse);
+}
+
+message CreateRequest {
+    int64 id = 1;
+}
+
+message CreateResponse {
+    int64 id = 1;
+}

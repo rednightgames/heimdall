@@ -1,0 +1,49 @@
+[package]
+name = "config"
+description = "Repository / Provider of configurations"
+authors = ["Dmitriy Chukhno <dmitr1sdadaya@protonmail.com>"]
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0"
+
+[[bin]]
+path = "src/main.rs"
+name = "config"
+
+[dependencies]
+actix = "0.13.1"
+actix-web = "4.4.1"
+actix-rt = "2.9.0"
+actix-multipart = "0.6.1"
+
+tokio = { version = "1.35.1", features = ["full"] }
+tokio-stream = "0.1.14"
+
+tonic = "0.10.2"
+prost-types = "0.12.3"
+prost = "0.12.3"
+
+futures = "0.3.30"
+async-trait = "0.1.75"
+lazy_static = "1.4.0"
+
+rust-s3 = "0.33.0"
+
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+chrono = { version = "0.4.26", features = ["serde"] }
+
+base64-url = "2.0.2"
+id = { path = "../../packages/id" }
+
+validator = { version = "0.16.1", features = ["derive"] }
+regex = "1.8.4"
+
+log = "0.4.20"
+env_logger = "0.10.1"
+thiserror = "1.0.56"
+
+cdrs-tokio = "8.1.2"
+
+[build-dependencies]
+tonic-build = "0.10.2"

@@ -1,4 +1,4 @@
-<h1><img src="https://github.com/rednightgames/heimdall/assets/152066369/37be85da-3407-426e-93b1-28eb7ab9c144" width="100%" alt="Heimdall"></h1>
+[![Heimdall](https://github.com/rednightgames/heimdall/assets/152066369/37be85da-3407-426e-93b1-28eb7ab9c144)](https://rednightgames.com/)
 
 This project is a monorepo hosting the Rednight API's services. It includes the services, their dependencies & shared modules as well as all tooling surrounding development of the services (as well as some additional miscellaneous things).
 
