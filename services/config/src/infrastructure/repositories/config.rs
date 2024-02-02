@@ -214,8 +214,61 @@ impl ConfigRepository for ConfigScyllaRepository {
         )?))
     }
 
-    async fn delete(&self, config_id: ID) -> RepositoryResult<()> {
-        println!("{}", config_id);
-        Ok(())
+    async fn delete(&self, environment_id: ID, config_id: ID) -> RepositoryResult<()> {
+        async fn delete_config(
+            repository: Arc<scylla::Session>,
+            config_id: ID,
+            environment_id: ID,
+        ) -> RepositoryResult<()> {
+            repository
+                .query_with_values(
+                    r#"select * from configs.configs where id = ? and environment_id = ?;"#,
+                    query_values!(config_id, environment_id),
+                )
+                .await
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .response_body()
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .into_rows()
+                .ok_or_else(|| ScyllaRepositoryError::from("Rows not found").into_inner())?;
+
+            Ok(())
+        }
+
+        async fn fetch_count(
+            repository: Arc<scylla::Session>,
+            config_id: ID,
+            environment_id: ID,
+        ) -> RepositoryResult<i64> {
+            let rows = repository
+                .query_with_values(
+                    r#"select count(*) from configs.configs where id = ? and environment_id = ?;"#,
+                    query_values!(config_id, environment_id),
+                )
+                .await
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .response_body()
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .into_rows()
+                .ok_or_else(|| ScyllaRepositoryError::from("Rows not found").into_inner())?;
+
+            rows.last().map_or(Ok(0), |r| {
+                Ok(ScyllaCount::try_from_row(r.clone())
+                    .map_err(|err| ScyllaRepositoryError::from(err).into_inner())
+                    .map(|count| count.into_inner())
+                    .unwrap_or(0))
+            })
+        }
+
+        let ((), count) = tokio::try_join!(
+            delete_config(self.repository.clone(), config_id, environment_id),
+            fetch_count(self.repository.clone(), config_id, environment_id)
+        )?;
+
+        if count != 1 {
+            Err(ScyllaRepositoryError::new("Not found", "Config not exists", 104).into_inner())
+        } else {
+            Ok(())
+        }
     }
 }

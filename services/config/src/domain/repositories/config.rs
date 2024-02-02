@@ -42,5 +42,5 @@ pub trait ConfigRepository: Send + Sync {
         params: ConfigQueryParams,
     ) -> RepositoryResult<ResultPaging<Config>>;
     async fn get(&self, environment_id: ID, config_id: ID) -> RepositoryResult<Config>;
-    async fn delete(&self, config_id: ID) -> RepositoryResult<()>;
+    async fn delete(&self, environment_id: ID, config_id: ID) -> RepositoryResult<()>;
 }

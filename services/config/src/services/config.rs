@@ -64,7 +64,7 @@ impl ConfigService for ConfigServiceImpl {
 
                 tokio::task::spawn_blocking(move || {
                     drop(storage.delete(environment_id, id));
-                    drop(repository.delete(id));
+                    drop(repository.delete(environment_id, id));
                 });
 
                 Err(error)
@@ -108,7 +108,7 @@ impl ConfigService for ConfigServiceImpl {
                 .delete(environment_id, config_id)
                 .map_err(CommonError::from),
             self.repository
-                .delete(config_id)
+                .delete(environment_id, config_id)
                 .map_err(CommonError::from),
         )?;
 

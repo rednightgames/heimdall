@@ -34,4 +34,5 @@ pub trait EnvironmentRepository: Send + Sync {
         &self,
         params: EnvironmentQueryParams,
     ) -> RepositoryResult<ResultPaging<Environment>>;
+    async fn delete(&self, environment_id: ID) -> RepositoryResult<()>;
 }

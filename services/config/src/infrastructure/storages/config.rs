@@ -48,7 +48,9 @@ impl ConfigStorage for ConfigS3Storage {
         self.storage
             .delete_object(format!("{}/{}.json", environment_id, config_id))
             .await
-            .map_err(|err| S3StorageError::from(err).into_inner())?;
+            .map_err(|_err| {
+                S3StorageError::new("Cannot delete config", "Storage error", 102).into_inner()
+            })?;
 
         Ok(())
     }

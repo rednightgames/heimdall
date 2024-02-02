@@ -24,7 +24,7 @@ impl EnvironmentScyllaRepository {
             .expect("scylla: initialisation failed: initialize keyspace");
 
         repository
-            .query(r#"create table if not exists configs.environments (id bigint, name text, created_at timestamp, primary key (name, id));"#)
+            .query(r#"create table if not exists configs.environments (id bigint, name text, created_at timestamp, primary key (id));"#)
             .await
             .expect("scylla: initialisation failed: initialize table");
 
@@ -78,7 +78,7 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
 
             let rows = repository
                 .query_with_values(
-                    r#"select * from configs.environments where id > ? limit ?;"#,
+                    r#"select * from configs.environments where token(id) > ? limit ?;"#,
                     query_values!(curr_page, page_size),
                 )
                 .await
@@ -104,7 +104,7 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
         ) -> RepositoryResult<i64> {
             let rows = repository
                 .query_with_values(
-                    r#"select count(*) from configs.environments where id > ?;"#,
+                    r#"select count(*) from configs.environments where token(id) > ?;"#,
                     query_values!(curr_page),
                 )
                 .await
@@ -146,5 +146,77 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
             items: envs,
             next_page,
         })
+    }
+
+    async fn delete(&self, environment_id: ID) -> RepositoryResult<()> {
+        async fn delete_environment(
+            repository: Arc<scylla::Session>,
+            environment_id: ID,
+        ) -> RepositoryResult<()> {
+            repository
+                .query_with_values(
+                    r#"delete from configs.environments where id = ?;"#,
+                    query_values!(environment_id),
+                )
+                .await
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .response_body()
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?;
+
+            Ok(())
+        }
+
+        async fn delete_configs(
+            repository: Arc<scylla::Session>,
+            environment_id: ID,
+        ) -> RepositoryResult<()> {
+            repository
+                .query_with_values(
+                    r#"delete from configs.configs where environment_id = ?;"#,
+                    query_values!(environment_id),
+                )
+                .await
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .response_body()
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?;
+
+            Ok(())
+        }
+
+        async fn fetch_count(
+            repository: Arc<scylla::Session>,
+            environment_id: ID,
+        ) -> RepositoryResult<i64> {
+            let rows = repository
+                .query_with_values(
+                    r#"select count(*) from configs.environments where id = ?;"#,
+                    query_values!(environment_id),
+                )
+                .await
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .response_body()
+                .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
+                .into_rows()
+                .ok_or_else(|| ScyllaRepositoryError::new("Not found", "Environment not exists", 104).into_inner())?;
+
+            rows.last().map_or(Ok(0), |r| {
+                Ok(ScyllaCount::try_from_row(r.clone())
+                    .map_err(|err| ScyllaRepositoryError::from(err).into_inner())
+                    .map(|count| count.into_inner())
+                    .unwrap_or(0))
+            })
+        }
+
+        let ((), (), count) = tokio::try_join!(
+            delete_environment(self.repository.clone(), environment_id,),
+            delete_configs(self.repository.clone(), environment_id,),
+            fetch_count(self.repository.clone(), environment_id)
+        )?;
+
+        if count != 1 {
+            Err(ScyllaRepositoryError::new("Not found", "Environment not exists", 104).into_inner())
+        } else {
+            Ok(())
+        }
     }
 }

@@ -1,9 +1,9 @@
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use config::api::controllers::config_handler::{
-    create_config_handler, get_config_handler, list_config_handler,
+    create_config_handler, delete_config_handler, get_config_handler, list_config_handler,
 };
 use config::api::controllers::environment_handler::{
-    create_environment_handler, list_environment_handler,
+    create_environment_handler, delete_environment_handler, list_environment_handler,
 };
 use config::api::error::{not_found, HttpError};
 use config::api::grpc::config::ConfigService;
@@ -45,15 +45,21 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(
                 web::scope("/environments/")
-                    .route("", web::post().to(create_environment_handler))
-                    .route("", web::get().to(list_environment_handler))
+                    .route("/", web::post().to(create_environment_handler))
+                    .route("/", web::get().to(list_environment_handler))
                     .service(
-                        web::scope("/{environment_id}/").service(
-                            web::scope("/configs/")
-                                .route("/", web::post().to(create_config_handler))
-                                .route("/", web::get().to(list_config_handler))
-                                .route("/{config_id}/", web::get().to(get_config_handler)),
-                        ),
+                        web::scope("/{environment_id}/")
+                            .route("/", web::delete().to(delete_environment_handler))
+                            .service(
+                                web::scope("/configs/")
+                                    .route("/", web::post().to(create_config_handler))
+                                    .route("/", web::get().to(list_config_handler))
+                                    .route("/{config_id}/", web::get().to(get_config_handler))
+                                    .route(
+                                        "/{config_id}/",
+                                        web::delete().to(delete_config_handler),
+                                    ),
+                            ),
                     ),
             )
             .service(
@@ -61,12 +67,18 @@ async fn main() -> std::io::Result<()> {
                     .route("", web::post().to(create_environment_handler))
                     .route("", web::get().to(list_environment_handler))
                     .service(
-                        web::scope("/{environment_id}").service(
-                            web::scope("/configs")
-                                .route("", web::post().to(create_config_handler))
-                                .route("", web::get().to(list_config_handler))
-                                .route("/{config_id}", web::get().to(get_config_handler)),
-                        ),
+                        web::scope("/{environment_id}")
+                            .route("", web::delete().to(delete_environment_handler))
+                            .service(
+                                web::scope("/configs")
+                                    .route("", web::post().to(create_config_handler))
+                                    .route("", web::get().to(list_config_handler))
+                                    .route("/{config_id}", web::get().to(get_config_handler))
+                                    .route(
+                                        "/{config_id}",
+                                        web::delete().to(delete_config_handler),
+                                    ),
+                            ),
                     ),
             )
             .default_service(web::to(not_found))

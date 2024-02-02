@@ -52,3 +52,14 @@ pub async fn get_config_handler(
 
     Ok(HttpResponse::Ok().json(ConfigDTO::from(config)))
 }
+
+pub async fn delete_config_handler(
+    info: web::Path<(ID, ID)>,
+    config_service: web::Data<dyn ConfigService>,
+) -> Result<actix_web::HttpResponse, ApiError> {
+    let (environment_id, config_id) = info.into_inner();
+
+    config_service.delete(environment_id, config_id).await?;
+
+    Ok(HttpResponse::NoContent().finish())
+}
