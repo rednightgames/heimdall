@@ -10,6 +10,15 @@ lazy_static! {
     static ref UPPER_LOWER_DASH: Regex = Regex::new(r"^[a-zA-Z0-9\-]+$").unwrap();
 }
 
+#[derive(Debug, Serialize)]
+pub struct ConfigDTO {
+    pub id: ID,
+    pub name: String,
+    pub config: String,
+    pub environment_id: ID,
+    pub created_at: i64,
+}
+
 #[derive(Serialize, Deserialize, Validate)]
 pub struct CreateConfigDTO {
     #[validate(
@@ -20,28 +29,12 @@ pub struct CreateConfigDTO {
     pub name: Option<String>,
     #[validate(required, length(min = 1))]
     pub config: Option<String>,
-    #[validate(
-        required,
-        length(min = 1),
-        regex(path = "UPPER_LOWER_DASH", code = "Invalid environment name")
-    )]
-    pub environment: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ConfigDTO {
-    pub id: ID,
-    pub name: String,
-    pub config: String,
-    pub environment: String,
-    pub created_at: i64,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ListConfigDTO {
     pub id: ID,
     pub name: String,
-    pub environment: String,
     pub created_at: i64,
 }
 
@@ -50,7 +43,6 @@ impl From<CreateConfigDTO> for CreateConfig {
         CreateConfig {
             name: config.name.unwrap(),
             config: config.config.unwrap(),
-            environment: config.environment.unwrap(),
         }
     }
 }
@@ -61,7 +53,7 @@ impl From<Config> for ConfigDTO {
             id: config.id,
             name: config.name,
             config: config.config,
-            environment: config.environment,
+            environment_id: config.environment_id,
             created_at: config.created_at,
         }
     }
@@ -72,7 +64,6 @@ impl From<Config> for ListConfigDTO {
         ListConfigDTO {
             id: config.id,
             name: config.name,
-            environment: config.environment,
             created_at: config.created_at,
         }
     }
@@ -87,6 +78,7 @@ impl From<ResultPaging<Config>> for ResultPaging<ListConfigDTO> {
                 .map(|config: Config| ListConfigDTO::from(config))
                 .collect(),
             code: configs.code,
+            next_page: configs.next_page,
         }
     }
 }

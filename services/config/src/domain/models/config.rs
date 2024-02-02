@@ -6,7 +6,7 @@ pub struct Config {
     pub id: ID,
     pub name: String,
     pub config: String,
-    pub environment: String,
+    pub environment_id: ID,
     pub created_at: i64,
 }
 
@@ -14,5 +14,4 @@ pub struct Config {
 pub struct CreateConfig {
     pub name: String,
     pub config: String,
-    pub environment: String,
 }

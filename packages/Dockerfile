@@ -1,4 +1,6 @@
-FROM rust:slim-bullseye
+ARG TAG=latest
+
+FROM heimdall/proto:${TAG} AS builder
 
 ARG TAG=latest
 ARG GIT_SHA=latest

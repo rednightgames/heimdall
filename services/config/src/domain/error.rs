@@ -1,3 +1,4 @@
+use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
 use serde::Serialize;
 use std::fmt;
@@ -5,6 +6,7 @@ use std::fmt;
 #[derive(Debug, Serialize)]
 pub struct CommonError {
     pub message: String,
+    pub description: String,
     pub code: u32,
 }
 
@@ -31,25 +33,59 @@ impl fmt::Display for ApiError {
 
 impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse {
-        HttpResponse::BadRequest().json(&self.0)
+        HttpResponse::build(self.status_code()).json(&self.0)
+    }
+
+    fn status_code(&self) -> StatusCode {
+        match &self.0.code {
+            102 => StatusCode::INTERNAL_SERVER_ERROR,
+            104 => StatusCode::NOT_FOUND,
+            _ => StatusCode::BAD_REQUEST,
+        }
     }
 }
 
 #[derive(Debug)]
 pub struct RepositoryError {
     pub message: String,
+    pub description: String,
+    pub code: u32,
 }
 
 impl From<RepositoryError> for CommonError {
     fn from(error: RepositoryError) -> Self {
         CommonError {
             message: error.message,
-            code: 1,
+            description: error.description,
+            code: error.code,
         }
     }
 }
 
 impl fmt::Display for RepositoryError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+#[derive(Debug)]
+pub struct StorageError {
+    pub message: String,
+    pub description: String,
+    pub code: u32,
+}
+
+impl From<StorageError> for CommonError {
+    fn from(error: StorageError) -> Self {
+        CommonError {
+            message: error.message,
+            description: error.description,
+            code: error.code,
+        }
+    }
+}
+
+impl fmt::Display for StorageError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
     }
