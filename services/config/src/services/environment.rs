@@ -55,8 +55,12 @@ impl EnvironmentService for EnvironmentServiceImpl {
 
     async fn delete(&self, environment_id: ID) -> Result<(), CommonError> {
         tokio::try_join!(
-            self.storage.delete(environment_id).map_err(CommonError::from),
-            self.repository.delete(environment_id).map_err(CommonError::from),
+            self.storage
+                .delete(environment_id)
+                .map_err(CommonError::from),
+            self.repository
+                .delete(environment_id)
+                .map_err(CommonError::from),
         )?;
 
         Ok(())

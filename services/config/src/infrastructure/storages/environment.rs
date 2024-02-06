@@ -18,15 +18,23 @@ impl EnvironmentS3Storage {
 #[async_trait]
 impl EnvironmentStorage for EnvironmentS3Storage {
     async fn delete(&self, environment_id: ID) -> StorageResult<()> {
-        let rows = self.storage.list(format!("{}/", environment_id), Some("/".to_string())).await.map_err(|_err| 
-            S3StorageError::new("Cannot delete environment", "Storage error", 102).into_inner()
-        )?;
+        let rows = self
+            .storage
+            .list(format!("{}/", environment_id), Some("/".to_string()))
+            .await
+            .map_err(|_err| {
+                S3StorageError::new("Cannot delete environment", "Storage error", 102).into_inner()
+            })?;
 
         for row in rows {
             for obj in row.contents {
-                self.storage.delete_object(obj.key.to_string()).await.map_err(|_err| {
-                    S3StorageError::new("Cannot delete environment", "Storage error", 102).into_inner()
-                 })?;
+                self.storage
+                    .delete_object(obj.key.to_string())
+                    .await
+                    .map_err(|_err| {
+                        S3StorageError::new("Cannot delete environment", "Storage error", 102)
+                            .into_inner()
+                    })?;
             }
         }
 

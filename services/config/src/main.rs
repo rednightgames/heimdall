@@ -74,10 +74,7 @@ async fn main() -> std::io::Result<()> {
                                     .route("", web::post().to(create_config_handler))
                                     .route("", web::get().to(list_config_handler))
                                     .route("/{config_id}", web::get().to(get_config_handler))
-                                    .route(
-                                        "/{config_id}",
-                                        web::delete().to(delete_config_handler),
-                                    ),
+                                    .route("/{config_id}", web::delete().to(delete_config_handler)),
                             ),
                     ),
             )

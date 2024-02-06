@@ -197,7 +197,10 @@ impl EnvironmentRepository for EnvironmentScyllaRepository {
                 .response_body()
                 .map_err(|err| ScyllaRepositoryError::from(err).into_inner())?
                 .into_rows()
-                .ok_or_else(|| ScyllaRepositoryError::new("Not found", "Environment not exists", 104).into_inner())?;
+                .ok_or_else(|| {
+                    ScyllaRepositoryError::new("Not found", "Environment not exists", 104)
+                        .into_inner()
+                })?;
 
             rows.last().map_or(Ok(0), |r| {
                 Ok(ScyllaCount::try_from_row(r.clone())
